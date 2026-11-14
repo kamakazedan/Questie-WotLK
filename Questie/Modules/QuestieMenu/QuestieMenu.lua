@@ -299,16 +299,21 @@ function refreshProfessionButtons(profMenu, listFrame)
         if key and Townsfolk.professionTrainers[key] then
             local locked = isTrackedAsKnownProfession(key)
             local checked = isTracked(key)
-            local check, uncheck = _G[buttonName .. "Check"], _G[buttonName .. "UnCheck"]
+            local check, uncheck = _G[buttonName .. "Check"], _G[buttonName .. "UnCheck"] -- 3.3.5a: no UnCheck
 
             button:SetEnabled(not locked)
-            _G[buttonName .. "InvisibleButton"]:SetShown(locked)
+            local invisibleButton = _G[buttonName .. "InvisibleButton"]
+            if invisibleButton then
+                invisibleButton:SetShown(locked)
+            end
             check:SetShown(checked)
-            uncheck:SetShown(not checked)
             check:SetDesaturated(locked)
             check:SetAlpha(locked and 0.5 or 1)
-            uncheck:SetDesaturated(locked)
-            uncheck:SetAlpha(locked and 0.5 or 1)
+            if uncheck then
+                uncheck:SetShown(not checked)
+                uncheck:SetDesaturated(locked)
+                uncheck:SetAlpha(locked and 0.5 or 1)
+            end
             if checked then
                 button:LockHighlight()
             else

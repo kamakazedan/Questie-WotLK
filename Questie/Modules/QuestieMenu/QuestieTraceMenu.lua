@@ -97,8 +97,10 @@ function QuestieTraceMenu.RefreshButton(button, api)
     local isRunning = getIsRunning(api)
     tintButton(button, isRunning)
     button.checked = isRunning
-    button.Check:SetShown(isRunning)
-    button.UnCheck:SetShown(not isRunning)
+    if button.Check and button.UnCheck then -- 3.3.5a: dropdown buttons have no Check/UnCheck keys
+        button.Check:SetShown(isRunning)
+        button.UnCheck:SetShown(not isRunning)
+    end
     if isRunning then
         button:LockHighlight()
     else
