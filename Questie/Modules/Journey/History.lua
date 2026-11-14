@@ -1,3 +1,5 @@
+-- 3.3.5a: Blizzard_Calendar keeps these tables local (Compat335/Compat335.lua)
+local CALENDAR_FULLDATE_MONTH_NAMES = CALENDAR_FULLDATE_MONTH_NAMES or QuestieCompat335.CALENDAR_FULLDATE_MONTH_NAMES
 ---@type QuestieJourney
 local QuestieJourney = QuestieLoader:ImportModule("QuestieJourney")
 local _QuestieJourney = QuestieJourney.private

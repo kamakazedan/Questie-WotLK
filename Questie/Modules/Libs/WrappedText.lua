@@ -127,7 +127,7 @@ local function _GetTextWrapBreakByWidth(textWrapFontString, line, lineLength)
 
         textWrapFontString:SetText(utf8.sub(line, 1, endIndex))
 
-        if (textWrapFontString:GetUnboundedStringWidth() > textWrapFontString:GetWrappedWidth()) then
+        if (textWrapFontString:GetUnboundedStringWidth() > QuestieCompat335.GetWrappedWidth(textWrapFontString)) then
             local lineEndIndex = math_max(endIndex - 1, 1)
             return _GetPreferredWrapIndex(lastSpaceIndex, lineEndIndex)
         end
@@ -173,7 +173,7 @@ local function _GetTextWrapBreakByRawWidth(textWrapFontString, visibleLine, rawC
 
         textWrapFontString:SetText(_BuildRawMeasurementLine(rawCharactersByVisibleIndex, visibleStartIndex, absoluteEndIndex))
 
-        if (textWrapFontString:GetUnboundedStringWidth() > textWrapFontString:GetWrappedWidth()) then
+        if (textWrapFontString:GetUnboundedStringWidth() > QuestieCompat335.GetWrappedWidth(textWrapFontString)) then
             local lineEndIndex = math_max(relativeEndIndex - 1, 1)
             return _GetPreferredWrapIndex(lastSpaceIndex, lineEndIndex)
         end
@@ -190,7 +190,7 @@ end
 ---@return number nextStartIndex UTF-8 character index where next line should start.
 ---@return boolean brokeAtSpace True when break was a space boundary.
 local function _GetTextWrapBreak(textWrapFontString, line, lineLength)
-    if (not strfind(line, " ", 1, true) and textWrapFontString:GetUnboundedStringWidth() > textWrapFontString:GetWrappedWidth()) then
+    if (not strfind(line, " ", 1, true) and textWrapFontString:GetUnboundedStringWidth() > QuestieCompat335.GetWrappedWidth(textWrapFontString)) then
         local lineEndIndex, nextStartIndex, brokeAtSpace = _GetTextWrapBreakByWidth(textWrapFontString, line, lineLength)
         textWrapFontString:SetText(line)
         return lineEndIndex, nextStartIndex, brokeAtSpace
@@ -225,7 +225,7 @@ local function _GetTextWrapBreak(textWrapFontString, line, lineLength)
     if (endIndex > lineLength) then
         -- Some clients/fonts do not wrap Chinese text without spaces, so the FontString reports one visual row.
         -- In that case split by measured width instead.
-        if (textWrapFontString:GetUnboundedStringWidth() > textWrapFontString:GetWrappedWidth()) then
+        if (textWrapFontString:GetUnboundedStringWidth() > QuestieCompat335.GetWrappedWidth(textWrapFontString)) then
             local lineEndIndex, nextStartIndex, brokeAtSpace = _GetTextWrapBreakByWidth(textWrapFontString, line, lineLength)
             textWrapFontString:SetText(line)
             return lineEndIndex, nextStartIndex, brokeAtSpace
@@ -276,7 +276,7 @@ local function _GetRemainingRows(textWrapFontString, remainingLine, lastLine, ne
     end
 
     textWrapFontString:SetText(lastLine)
-    local remainingRows = textWrapFontString:GetUnboundedStringWidth() <= textWrapFontString:GetWrappedWidth() and 1 or 2
+    local remainingRows = textWrapFontString:GetUnboundedStringWidth() <= QuestieCompat335.GetWrappedWidth(textWrapFontString) and 1 or 2
     textWrapFontString:SetText(remainingLine)
 
     return remainingRows
@@ -316,7 +316,7 @@ local function _GetRemainingRowsByRawWidth(textWrapFontString, rawCharactersByVi
     local lastLine = _BuildRawMeasurementLine(rawCharactersByVisibleIndex, absoluteTailStartIndex, absoluteEndIndex)
 
     textWrapFontString:SetText(lastLine)
-    local remainingRows = textWrapFontString:GetUnboundedStringWidth() <= textWrapFontString:GetWrappedWidth() and 1 or 2
+    local remainingRows = textWrapFontString:GetUnboundedStringWidth() <= QuestieCompat335.GetWrappedWidth(textWrapFontString) and 1 or 2
     textWrapFontString:SetText(remainingLine)
 
     return remainingRows
@@ -584,7 +584,7 @@ function WrappedText:TextWrap(line, prefix, combineTrailing, desiredWidth, fontS
 
     -- Fast path: unwrapped text can be returned without token policy checks.
     textWrapObjectiveFontString:SetText(hasTextureEscapes and line or measuredLine)
-    if (textWrapObjectiveFontString:GetUnboundedStringWidth() > textWrapObjectiveFontString:GetWrappedWidth()) then
+    if (textWrapObjectiveFontString:GetUnboundedStringWidth() > QuestieCompat335.GetWrappedWidth(textWrapObjectiveFontString)) then
         local lines = {}
         local startIndex = 1
 
@@ -616,7 +616,7 @@ function WrappedText:TextWrap(line, prefix, combineTrailing, desiredWidth, fontS
             else
                 textWrapObjectiveFontString:SetText(remainingLine)
             end
-            if (textWrapObjectiveFontString:GetUnboundedStringWidth() <= textWrapObjectiveFontString:GetWrappedWidth()) then
+            if (textWrapObjectiveFontString:GetUnboundedStringWidth() <= QuestieCompat335.GetWrappedWidth(textWrapObjectiveFontString)) then
                 tinsert(lines, _BuildWrappedLine(startIndex, lineLength, remainingLine))
                 break
             end

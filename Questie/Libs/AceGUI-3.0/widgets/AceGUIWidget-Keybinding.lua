@@ -31,14 +31,14 @@ local function Keybinding_OnClick(frame, button)
 		if self.waitingForKey then
 			frame:EnableKeyboard(false)
 			frame:EnableMouseWheel(false)
-			frame:EnableGamePadButton(false)
+			if frame.EnableGamePadButton then frame:EnableGamePadButton(false) end
 			self.msgframe:Hide()
 			frame:UnlockHighlight()
 			self.waitingForKey = nil
 		else
 			frame:EnableKeyboard(true)
 			frame:EnableMouseWheel(true)
-			frame:EnableGamePadButton(true)
+			if frame.EnableGamePadButton then frame:EnableGamePadButton(true) end
 			self.msgframe:Show()
 			frame:LockHighlight()
 			self.waitingForKey = true
@@ -74,7 +74,7 @@ local function Keybinding_OnKeyDown(frame, key)
 
 		frame:EnableKeyboard(false)
 		frame:EnableMouseWheel(false)
-		frame:EnableGamePadButton(false)
+		if frame.EnableGamePadButton then frame:EnableGamePadButton(false) end
 		self.msgframe:Hide()
 		frame:UnlockHighlight()
 		self.waitingForKey = nil
@@ -122,7 +122,7 @@ local methods = {
 		self:SetDisabled(false)
 		self.button:EnableKeyboard(false)
 		self.button:EnableMouseWheel(false)
-		self.button:EnableGamePadButton(false)
+		if self.button.EnableGamePadButton then self.button:EnableGamePadButton(false) end
 	end,
 
 	-- ["OnRelease"] = nil,
@@ -204,7 +204,7 @@ local function Constructor()
 	button:SetPoint("BOTTOMRIGHT")
 	button:SetHeight(24)
 	button:EnableKeyboard(false)
-	button:EnableGamePadButton(false)
+	if button.EnableGamePadButton then button:EnableGamePadButton(false) end
 
 	local text = button:GetFontString()
 	text:SetPoint("LEFT", 7, 0)
@@ -216,7 +216,7 @@ local function Constructor()
 	label:SetJustifyH("CENTER")
 	label:SetHeight(18)
 
-	local msgframe = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+	local msgframe = CreateFrame("Frame", nil, UIParent, QuestieCompat335.BackdropTemplate)
 	msgframe:SetHeight(30)
 	msgframe:SetBackdrop(ControlBackdrop)
 	msgframe:SetBackdropColor(0,0,0)

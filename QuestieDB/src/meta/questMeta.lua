@@ -9,6 +9,7 @@
 -- compilerTypes preserves the original type names for provenance and public API compatibility.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local meta = {
   entity = 'Quest',

@@ -85,6 +85,8 @@ local Phasing = QuestieLoader:ImportModule("Phasing")
 local WorldMapButton = QuestieLoader:ImportModule("WorldMapButton")
 ---@type AvailableQuests
 local AvailableQuests = QuestieLoader:ImportModule("AvailableQuests")
+---@type QuestieCompat
+local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 ---@type DailyQuests
 local DailyQuests = QuestieLoader:ImportModule("DailyQuests")
 ---@type SeasonOfDiscovery
@@ -240,6 +242,27 @@ QuestieInit.Stages[2] = function()
     coYield()
     Questie.Debug(Questie.DEBUG_DEVELOP, "[QuestieInit:Stage2] QuestieJourney initializing.")
     QuestieJourney:Initialize()
+
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: the completed quests come from the server on request (QueryQuestsCompleted).
+        -- QuestieQuest:Initialize reads them in stage 3, so wait for the answer (but not forever).
+        Questie.Debug(Questie.DEBUG_DEVELOP, "[QuestieInit:Stage2] Waiting for the completed quests.")
+        QuestieCompat335.RequestCompletedQuests()
+        local giveUpAt = GetTime() + 15
+        while (not QuestieCompat335.completedQuestsReady) and GetTime() < giveUpAt do
+            coYield()
+        end
+        if not QuestieCompat335.completedQuestsReady then
+            Questie.Debug(Questie.DEBUG_CRITICAL, "[QuestieInit:Stage2] The server did not send the completed quests; continuing without them.")
+            -- Use the list as soon as it does arrive.
+            QuestieCompat335.RequestCompletedQuests(function()
+                if Questie.started then
+                    Questie.db.char.complete = QuestieCompat.GetQuestsCompleted()
+                    AvailableQuests.CalculateAndDrawAll()
+                end
+            end)
+        end
+    end
 
     local keepWaiting = true
     -- We had users reporting that a quest did not reach a valid state in the game cache.

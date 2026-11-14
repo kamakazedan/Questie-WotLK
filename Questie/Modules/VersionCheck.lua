@@ -2,6 +2,7 @@
 QuestieLoader:StampLoadBoundary()
 
 local addonName, _ = ...
+addonName = addonName or "Questie" -- 3.3.5a: in case the client passes no addon name
 
 -- Check addon is not renamed to avoid conflicts in global name space.
 if addonName ~= "Questie" then
@@ -115,8 +116,8 @@ Questie.IsHardcore = C_GameRules and C_GameRules.IsHardcoreActive()
 
 --- Addon is running on a Chinese realm
 ---@type boolean
-Questie.IsChinaRegion = GetCurrentRegion() == 5
+Questie.IsChinaRegion = QuestieCompat335.GetCurrentRegion() == 5 -- 3.3.5a: no GetCurrentRegion
 
 --- Addon is running on EU realm
 ---@type boolean
-Questie.IsEURegion = GetCurrentRegion() == 3
+Questie.IsEURegion = QuestieCompat335.GetCurrentRegion() == 3

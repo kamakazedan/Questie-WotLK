@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Map = QuestieCompat335.C_Map
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -24,6 +27,13 @@ local IsAddOnLoaded = QuestieCompat.IsAddOnLoaded
 
 
 local function GetMapTitleText()
+    -- 3.3.5a: the world map's title is the WorldMapFrameTitle font string
+    if (not WorldMapFrame.BorderFrame) then
+        if WorldMapFrameTitle then
+            return WorldMapFrameTitle, "SetText"
+        end
+        return nil
+    end
     -- Newer clients use PortraitFrameTemplate, where the title is set via SetTitle and is not a direct region
     if WorldMapFrame.BorderFrame.SetTitle then
         return WorldMapFrame.BorderFrame, "SetTitle"
@@ -81,7 +91,7 @@ function QuestieCoords:WriteCoords()
         -- get cursor position
         local curX, curY = GetCursorPosition();
 
-        local canvas = WorldMapFrame:GetCanvas()
+        local canvas = QuestieCompat335.GetWorldMapCanvas() -- 3.3.5a: WorldMapButton
 
         local scale = canvas:GetEffectiveScale();
         curX = curX / scale;
@@ -146,7 +156,7 @@ function QuestieCoords:ResetMapText()
     local mapTitleText, setter = GetMapTitleText()
     if mapTitleText then
         local title = WORLD_MAP
-        if setter == "SetTitle" and (not WorldMapFrame:IsMaximized()) then
+        if setter == "SetTitle" and WorldMapFrame.IsMaximized and (not WorldMapFrame:IsMaximized()) then
             title = MAP_AND_QUEST_LOG
         end
         mapTitleText[setter](mapTitleText, title)
@@ -154,7 +164,7 @@ function QuestieCoords:ResetMapText()
 end
 
 function QuestieCoords:ResetMiniWorldMapText()
-    local currentMapId = WorldMapFrame:GetMapID();
+    local currentMapId = QuestieCompat335.GetWorldMapID(); -- 3.3.5a: the map frame has no GetMapID
     if currentMapId then
         local info = C_Map.GetMapInfo(currentMapId);
         local miniWorldMapTitleText = GetMiniWorldMapTitleText()

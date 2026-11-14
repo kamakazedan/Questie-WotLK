@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Calendar = QuestieCompat335.C_Calendar
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -133,10 +136,24 @@ local DMF_START_DAY_BY_FIRST_WEEKDAY = {
 }
 
 function QuestieEvent.Initialize()
+    local loaded = false
     Questie:RegisterEvent("CALENDAR_UPDATE_EVENT_LIST", function()
-        QuestieEvent:Load()
         Questie:UnregisterEvent("CALENDAR_UPDATE_EVENT_LIST")
+        if not loaded then
+            loaded = true
+            QuestieEvent:Load()
+        end
     end)
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a servers do not always answer the calendar request; the event dates do not need it.
+        C_Timer.After(10, function()
+            if not loaded then
+                loaded = true
+                Questie:UnregisterEvent("CALENDAR_UPDATE_EVENT_LIST")
+                QuestieEvent:Load()
+            end
+        end)
+    end
 
     -- According to the docs, OpenCalendar queries the server to force a CALENDAR_UPDATE_EVENT_LIST update.
     -- In reality SetMonth is the reliable one. So we simply call both.

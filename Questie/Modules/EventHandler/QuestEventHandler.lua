@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local Enum = QuestieCompat335.Enum
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 

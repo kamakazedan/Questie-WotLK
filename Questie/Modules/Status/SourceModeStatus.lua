@@ -7,7 +7,7 @@ local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 ---@type Expansions
 local Expansions = QuestieLoader:ImportModule("Expansions")
 
-local SOURCE_ICON = {texture = "Interface\\AddOns\\Questie\\Icons\\green_plus.png"}
+local SOURCE_ICON = {texture = "Interface\\AddOns\\Questie\\Icons\\green_plus.tga"}
 local PROJECT_NAMES = {
     "WOW_PROJECT_MAINLINE", "WOW_PROJECT_CLASSIC", "WOW_PROJECT_BURNING_CRUSADE_CLASSIC",
     "WOW_PROJECT_WRATH_CLASSIC", "WOW_PROJECT_CATACLYSM_CLASSIC", "WOW_PROJECT_MISTS_CLASSIC",
@@ -65,7 +65,7 @@ end
 
 local function _ClientDetails()
     local version, build, buildDate, interfaceVersion = GetBuildInfo()
-    local region = GetCurrentRegion()
+    local region = QuestieCompat335.GetCurrentRegion() -- 3.3.5a: no GetCurrentRegion
     local seasonId, hasSeason
     if C_Seasons then
         if type(C_Seasons.GetActiveSeason) == "function" then seasonId = C_Seasons.GetActiveSeason() end

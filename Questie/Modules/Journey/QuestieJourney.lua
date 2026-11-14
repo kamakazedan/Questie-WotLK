@@ -193,7 +193,7 @@ function QuestieJourney:ToggleJourneyWindow()
     end
 
     if (not isWindowShown) then
-        PlaySound(882)
+        QuestieCompat335.PlaySound(882) -- 3.3.5a: sound names, not kit IDs
 
         local treeGroup = _QuestieJourney:HandleTabChange(_QuestieJourney.containerCache, _QuestieJourney.lastOpenWindow)
         if treeGroup then
@@ -218,7 +218,17 @@ function QuestieJourney:SetupKeybinding()
     Questie.db.global.journeyKeybindDefaultApplied = true
 
     local currentBinding = GetBindingKey("QUESTIE_TOGGLE_JOURNEY")
-    if not currentBinding and not C_KeyBindings.GetBindingByKey(";") then
+    local semicolonAction
+    if C_KeyBindings and C_KeyBindings.GetBindingByKey then
+        semicolonAction = C_KeyBindings.GetBindingByKey(";")
+    elseif GetBindingAction then
+        -- 3.3.5a
+        semicolonAction = GetBindingAction("SEMICOLON")
+        if semicolonAction == "" then
+            semicolonAction = nil
+        end
+    end
+    if not currentBinding and not semicolonAction then
         SetBinding("SEMICOLON", "QUESTIE_TOGGLE_JOURNEY")
         Questie.Debug(Questie.DEBUG_INFO, "Set default keybind ';' for Questie Journey")
     end

@@ -63,9 +63,9 @@ function AceComm:RegisterComm(prefix, method)
 	end
 	if C_ChatInfo then
 		C_ChatInfo.RegisterAddonMessagePrefix(prefix)
-	else
+	elseif RegisterAddonMessagePrefix then
 		RegisterAddonMessagePrefix(prefix)
-	end
+	end -- 3.3.5a: prefixes need no registration
 
 	return AceComm._RegisterComm(self, prefix, method)	-- created by CallbackHandler
 end
@@ -93,6 +93,10 @@ function AceComm:SendCommMessage(prefix, text, distribution, target, prio, callb
 
 	local textlen = #text
 	local maxtextlen = 255  -- Yes, the max is 255 even if the dev post said 256. I tested. Char 256+ get silently truncated. /Mikk, 20110327
+	if QuestieCompat335 and QuestieCompat335.isLegacyClient then
+		-- 3.3.5a: prefix, tab separator and text share a single 255 byte message
+		maxtextlen = 254 - #prefix
+	end
 	local queueName = prefix
 
 	local ctlCallback = nil

@@ -66,12 +66,26 @@ function QuestieMap.utils.SetDrawOrder(frame)
 
     -- Setting ParentFrame and FrameStrata are handled by HBD / WOW-UI code
 
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: frame levels are kept small and relative to the icon's parent (the map pin or the
+        -- minimap). The pins re-apply questieDrawOrder whenever they re-parent an icon.
+        local order = frameLevel - 2016
+        frame.questieDrawOrder = order
+        local parent = frame:GetParent()
+        frame:SetFrameLevel((parent and parent:GetFrameLevel() or 0) + 1 + order)
+        return
+    end
+
     frame:SetFixedFrameLevel(false)
     frame:SetFrameLevel(frameLevel)
     frame:SetFixedFrameLevel(true) -- Stop framelevel changes when parent changes
 end
 
 function QuestieMap.utils.IsExplored(uiMapId, x, y)
+    if not C_MapExplorationInfo then
+        -- 3.3.5a can only tell for the map the world map shows; treat everything as explored
+        return true
+    end
     local IsExplored = false
     if uiMapId then
         local exploredAreaIDs = C_MapExplorationInfo.GetExploredAreaIDsAtPosition(uiMapId, CreateVector2D(x / 100, y / 100))

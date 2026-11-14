@@ -29,6 +29,7 @@
 --   writers["faction"]               nil -> 3, "A" -> 0, "H" -> 1, "" -> 3, else -> 2
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local normalize = {}
 

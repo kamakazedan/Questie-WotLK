@@ -111,7 +111,7 @@ function _MinimapIcon:CreateDataBrokerObject()
     local LDBDataObject = LibStub("LibDataBroker-1.1"):NewDataObject("Questie", {
         type = "data source",
         text = Questie.db.profile.ldbDisplayText,
-        icon = "Interface\\Addons\\Questie\\Icons\\questie.png",
+        icon = "Interface\\Addons\\Questie\\Icons\\questie.tga",
 
         OnClick = _MinimapIcon.OnClick,
 

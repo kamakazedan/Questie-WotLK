@@ -13,20 +13,67 @@ local QuestieMenu = QuestieLoader:ImportModule("QuestieMenu")
 ---@type QuestieOptionsEngine
 local QuestieOptionsEngine = QuestieLoader:ImportModule("QuestieOptionsEngine")
 
-local KButtons = LibStub("Krowi_WorldMapButtons-1.4")
-if Questie.IsForever then
-    -- Krowi classifies version 1.x as the old Classic map. Forever has modern overlay buttons;
-    -- its old-map workaround reparents them away from the map and breaks GetMapID/TriggerEvent.
-    KButtons.HasNoOverlay = false
-end
+-- 3.3.5a: the button is built here and placed in the top right corner of the map. The library that
+-- places it on later clients (Krowi_WorldMapButtons) needs their world map frame.
 
 ---@type AceConfigDialog-3.0
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
 local mapButton
 
+local ICON = "Interface\\AddOns\\Questie\\Icons\\questie.tga"
+
+---@return Button
+local function _CreateButton()
+    local parent = _G.WorldMapButton -- the map frame; "WorldMapButton" is this module in here
+    local button = CreateFrame("Button", "QuestieWorldMapButton", parent)
+    button:SetWidth(32)
+    button:SetHeight(32)
+    button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -4, -4)
+    -- above Questie's map icons (HereBeDragons-Pins puts them at WORLDMAP_POI_FRAMELEVEL + 5 and up)
+    button:SetFrameLevel((WORLDMAP_POI_FRAMELEVEL or 100) + 30)
+    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+
+    local background = button:CreateTexture(nil, "BACKGROUND")
+    background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+    background:SetWidth(25)
+    background:SetHeight(25)
+    background:SetPoint("TOPLEFT", 2, -4)
+    button.Background = background
+
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture(ICON)
+    icon:SetWidth(22)
+    icon:SetHeight(22)
+    icon:SetPoint("TOPLEFT", 6, -5)
+    button.Icon = icon
+
+    local border = button:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetWidth(54)
+    border:SetHeight(54)
+    border:SetPoint("TOPLEFT")
+    button.Border = border
+
+    button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight", "ADD")
+
+    for scriptName, handler in pairs(QuestieWorldMapButtonMixin) do
+        if scriptName == "OnMouseDown" or scriptName == "OnMouseUp" or scriptName == "OnEnter" or scriptName == "OnHide" then
+            button:SetScript(scriptName, handler)
+        end
+    end
+    button:SetScript("OnLeave", GameTooltip_Hide)
+    -- WorldMapFrame_ResetFrameLevels (map size changes) moves the map's frames; stay on top of them.
+    if type(WorldMapFrame_ResetFrameLevels) == "function" then
+        hooksecurefunc("WorldMapFrame_ResetFrameLevels", function()
+            button:SetFrameLevel((WORLDMAP_POI_FRAMELEVEL or 100) + 30)
+        end)
+    end
+    return button
+end
+
 function WorldMapButton.Initialize()
-    mapButton = KButtons:Add("QuestieWorldMapButtonTemplate", "BUTTON")
+    mapButton = _CreateButton()
 
     Questie.WorldMap = {
         Button = mapButton

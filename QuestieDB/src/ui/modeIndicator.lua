@@ -10,6 +10,7 @@
 -- guarantee does not depend on a consumer existing.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local indicator = {}
 

@@ -7,6 +7,7 @@
 -- place, the way the correction manifest states load order in one place.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local modules = LibQuestieDB.__derivedModules or {}
 LibQuestieDB.RamerDouglasPeucker = modules.RamerDouglasPeucker

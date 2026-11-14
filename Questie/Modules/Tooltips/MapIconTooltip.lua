@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Map = QuestieCompat335.C_Map
+
 ---@class MapIconTooltip
 local MapIconTooltip = QuestieLoader:CreateModule("MapIconTooltip");
 local _MapIconTooltip = {}
@@ -38,18 +41,18 @@ local QuestieFrame = QuestieLoader:ImportModule("QuestieFrame")
 
 ---@type HBDPins
 local HBDPins = QuestieLoader:ImportModule("HBDPins")
-local GetCoinTextureString = C_CurrencyInfo.GetCoinTextureString or GetCoinTextureString
+local GetCoinTextureString = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
 
 
 local REPUTATION_ICON_PATH = QuestieLib.AddonPath .. "Icons\\reputation.blp"
 local REPUTATION_ICON_TEXTURE_SIZE = 14
 local REPUTATION_ICON_TEXTURE = "|T" .. REPUTATION_ICON_PATH .. ":" .. REPUTATION_ICON_TEXTURE_SIZE .. ":" .. REPUTATION_ICON_TEXTURE_SIZE .. ":2:0|t"
 
-local NEXT_QUEST_ICON_PATH = QuestieLib.AddonPath .. "Icons\\nextquest.blp"
+local NEXT_QUEST_ICON_PATH = QuestieLib.AddonPath .. "Icons\\nextquest.tga"
 local NEXT_QUEST_ICON_TEXTURE_SIZE = 16
 local NEXT_QUEST_ICON_TEXTURE = "|T" .. NEXT_QUEST_ICON_PATH .. ":" .. NEXT_QUEST_ICON_TEXTURE_SIZE .. ":" .. NEXT_QUEST_ICON_TEXTURE_SIZE .. ":2:0|t"
 
-local BREADCRUMB_QUEST_ICON_PATH = QuestieLib.AddonPath .. "Icons\\breadcrumbtooltip.png"
+local BREADCRUMB_QUEST_ICON_PATH = QuestieLib.AddonPath .. "Icons\\breadcrumbtooltip.tga"
 local BREADCRUMB_QUEST_ICON_TEXTURE_SIZE = 16
 local BREADCRUMB_QUEST_ICON_TEXTURE = "|T" .. BREADCRUMB_QUEST_ICON_PATH .. ":" .. BREADCRUMB_QUEST_ICON_TEXTURE_SIZE .. ":" .. BREADCRUMB_QUEST_ICON_TEXTURE_SIZE .. ":2:0|t"
 
@@ -111,7 +114,7 @@ function MapIconTooltip.ShowOnTooltip(self, Tooltip, owner, icons)
     Tooltip:SetOwner(owner or self, "ANCHOR_CURSOR"); --"ANCHOR_CURSOR" or (self, self)
 
     local maxDistCluster = 1
-    local mapId = WorldMapFrame:GetMapID();
+    local mapId = QuestieCompat335.GetWorldMapID(); -- 3.3.5a: the map frame has no GetMapID
 
     if C_Map and C_Map.GetMapInfo then
         local mapInfo = C_Map.GetMapInfo(mapId)

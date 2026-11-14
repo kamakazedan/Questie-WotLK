@@ -4,6 +4,7 @@
 -- use C_EncodingUtil after src/read/baked.lua reassembles any numbered parts.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local codec = {}
 

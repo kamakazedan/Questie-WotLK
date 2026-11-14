@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local GetQuestID = GetQuestID or QuestieCompat335.GetQuestID
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -26,7 +29,7 @@ function AutoQuesting.OnQuestDetail()
 
     if Questie.db.profile.autoAccept.rejectSharedInBattleground and UnitInBattleground("player") then
         local giverGuid = UnitGUID("questnpc")
-        local unitType = giverGuid and strsplit("-", giverGuid)
+        local unitType = giverGuid and QuestieCompat335.GetGuidInfo(giverGuid) -- 3.3.5a: hex GUIDs
         if unitType == "Player" then
             DeclineQuest()
             Questie:Print(l10n("Automatically rejected quest shared by player."))
@@ -228,9 +231,8 @@ _IsAllowedNPC = function(unit)
         return false
     end
     if npcGuid then
-        local kind, _, _, _, _, npcIDStr = strsplit("-", npcGuid)
+        local kind, npcId = QuestieCompat335.GetGuidInfo(npcGuid) -- 3.3.5a: hex GUIDs
         if kind == "Creature" or kind == "Vehicle" then
-            local npcId = tonumber(npcIDStr)
             if AutoQuesting.private.disallowedNPCs[npcId] then
                 return false
             end

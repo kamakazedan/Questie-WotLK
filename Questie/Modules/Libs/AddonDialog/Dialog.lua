@@ -9,6 +9,7 @@
 -- this implementation. There is no widget global or XML template to coordinate.
 -- See the accompanying README.md for a complete definition and usage example.
 local _, addon = ...
+addon = addon or QuestieCompat335 -- 3.3.5a: shared table if the client passes no namespace
 if addon.Dialog then return end
 local PopupStack = LibStub("LibPopupStack-1.0")
 
@@ -160,7 +161,7 @@ end
 ---Anonymous frames expose child references directly; no generated global names exist.
 ---@return DialogFrame
 local function CreateDialog()
-  local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+  local frame = CreateFrame("Frame", nil, UIParent, QuestieCompat335.BackdropTemplate)
   for key, method in pairs(FrameMixin) do frame[key] = method end
   frame:Hide()
   frame:SetSize(420, 136)
@@ -169,7 +170,8 @@ local function CreateDialog()
   frame:SetToplevel(true)
   frame:SetClampedToScreen(true)
   frame:EnableMouse(true)
-  frame:EnableKeyboard(true)
+  -- 3.3.5a cannot pass keys on to the game, so a keyboard-enabled dialog would take every key
+  frame:EnableKeyboard(frame.SetPropagateKeyboardInput ~= nil)
 
   frame.Background = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
   frame.Background:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -7)
@@ -336,12 +338,16 @@ function FrameMixin:OnKeyDown(key)
     return
   end
   local handled = self:ConsumesMenuKey(key)
-  self:SetPropagateKeyboardInput(not handled)
+  if self.SetPropagateKeyboardInput then
+    self:SetPropagateKeyboardInput(not handled)
+  end
   if not handled then return end
   self:CancelByMenuKey()
   -- Reopening during the callback resets input propagation. Consume this key
   -- after the callback so the same key cannot reach another window/binding.
-  self:SetPropagateKeyboardInput(false)
+  if self.SetPropagateKeyboardInput then
+    self:SetPropagateKeyboardInput(false)
+  end
 end
 
 ---Other buttons return true so they still control the game. No keyboard propagation
@@ -400,7 +406,12 @@ function FrameMixin:OnLoad()
     self.Background:Show()
     self.Border:Show()
   else
-    self:SetBackdrop(BACKDROP_DIALOG_32_32)
+    self:SetBackdrop(BACKDROP_DIALOG_32_32 or { -- 3.3.5a: no BACKDROP_DIALOG_32_32
+      bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+      edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+      tile = true, tileSize = 32, edgeSize = 32,
+      insets = {left = 11, right = 12, top = 12, bottom = 11},
+    })
   end
   -- Font objects are shared read-only assets. Set fonts on our instances; never
   -- change the shared font objects themselves, which would affect unrelated UI.
@@ -427,7 +438,7 @@ end
 ---SetPropagateKeyboardInput is protected in combat. Without it the dialog would
 ---swallow every key, so ignore the keyboard until the next Show out of combat.
 function FrameMixin:UpdateKeyboardHandling()
-  local enabled = not InCombatLockdown()
+  local enabled = (not InCombatLockdown()) and self.SetPropagateKeyboardInput ~= nil -- 3.3.5a: see CreateDialog
   self:EnableKeyboard(enabled)
   if enabled then self:SetPropagateKeyboardInput(true) end
 end

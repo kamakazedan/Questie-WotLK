@@ -8,6 +8,7 @@
 -- Base entities Titan re-authors in place keep authored rows, because l10n still carries the
 -- original WotLK text for them.
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 local flavor = LibQuestieDB.flavor
 local seasons = rawget(_G, "C_Seasons")
 if not flavor or flavor.expansion ~= "Wotlk" or not seasons or

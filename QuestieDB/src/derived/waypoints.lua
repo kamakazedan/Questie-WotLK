@@ -22,6 +22,7 @@
 -- test.lua check simplification, subdivision, and ordering against literal expected values.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local pairs, type = pairs, type
 local abs, sqrt, ceil = math.abs, math.sqrt, math.ceil

@@ -392,13 +392,13 @@ function QuestieTooltips.GetTooltip(key, playerZone)
                             colorText = ":" .. tostring(math.floor(r * 255)) .. ":" .. tostring(math.floor(g * 255)) .. ":" .. tostring(math.floor(b * 255))
                         end
                         if tooltip.type == "NPC" then
-                            questString = "|TInterface\\Addons\\Questie\\Icons\\tooltip_available.png:14:14:0:0:32:32:0:32:0:32" .. colorText .. "|t" .. questString
+                            questString = "|TInterface\\Addons\\Questie\\Icons\\tooltip_available.tga:14:14:0:0:32:32:0:32:0:32" .. colorText .. "|t" .. questString
                         elseif tooltip.type == "Finisher" then
-                            questString = "|TInterface\\Addons\\Questie\\Icons\\tooltip_complete.png:14:14:0:0:32:32:0:32:0:32" .. colorText .. "|t" .. questString
+                            questString = "|TInterface\\Addons\\Questie\\Icons\\tooltip_complete.tga:14:14:0:0:32:32:0:32:0:32" .. colorText .. "|t" .. questString
                         elseif tooltip.type == "itemFromMonster" or tooltip.type == "itemFromObject" then
-                            questString = "|TInterface\\Addons\\Questie\\Icons\\available_mobdrop.png:14|t" .. questString
+                            questString = "|TInterface\\Addons\\Questie\\Icons\\available_mobdrop.tga:14|t" .. questString
                         elseif tooltip.type == "Object" then
-                            questString = "|TInterface\\Addons\\Questie\\Icons\\available_object.png:14|t" .. questString
+                            questString = "|TInterface\\Addons\\Questie\\Icons\\available_object.tga:14|t" .. questString
                         end
                     end
                     questLines[questId] = questLines[questId] or {}
@@ -442,13 +442,13 @@ function QuestieTooltips.GetTooltip(key, playerZone)
                         if dropRateData and dropRateData[1] and Questie.db.profile.enableTooltipDroprates then
                             if Questie.db.profile.debugEnabled and dropRateData and dropRateData[2] then
                                 if dropRateData[2] == "cmangos" then
-                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\cmangos.png:10|t "
+                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\cmangos.tga:10|t "
                                 elseif dropRateData[2] == "mangos3" then
-                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\mangos3.png:12|t "
+                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\mangos3.tga:12|t "
                                 elseif dropRateData[2] == "wowhead" then
-                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\wowhead.png:12|t "
+                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\wowhead.tga:12|t "
                                 elseif dropRateData[2] == "questie" then
-                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\questie_flat.png:12|t "
+                                    dropIcon = "|TInterface\\Addons\\Questie\\Icons\\questie_flat.tga:12|t "
                                 end
                             end
                             dropRateText = "  |cFF999999" .. dropIcon .. "[" .. FormatDropText(dropRateData[1]) .. "%]|r";
@@ -679,7 +679,10 @@ function QuestieTooltips:Initialize()
         ---@param tooltip GameTooltip
         ---@return nil
         local function AddSpellId(tooltip)
-            local _, spellId = tooltip:GetSpell()
+            local _, spellId, legacySpellId = tooltip:GetSpell()
+            if QuestieCompat335.isLegacyClient then
+                spellId = legacySpellId -- 3.3.5a: name, rank, spellID
+            end
             _QuestieTooltips.AddSpellIdToTooltip(tooltip, spellId)
         end
         if ItemRefTooltip:HasScript("OnTooltipSetSpell") then

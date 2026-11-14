@@ -17,6 +17,34 @@ local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 -- Below Questie's icons, which start at 2016 (QuestieMap.utils.SetDrawOrder).
 local FRAME_LEVEL = 2015
 
+-- 3.3.5a: the map is drawn on WorldMapButton, without zooming (no ScrollContainer). Questie's icons
+-- sit on a canvas at WORLDMAP_POI_FRAMELEVEL + 5 (HereBeDragons-Pins), so paths go just below it.
+local LEGACY = QuestieCompat335.isLegacyClient
+if LEGACY then
+    FRAME_LEVEL = (WORLDMAP_POI_FRAMELEVEL or 100) + 4
+end
+
+local function _GetMapID()
+    if LEGACY then
+        return QuestieCompat335.GetWorldMapID()
+    end
+    return WorldMapFrame:GetMapID()
+end
+
+local function _GetCanvas()
+    if LEGACY then
+        return QuestieCompat335.GetWorldMapCanvas()
+    end
+    return WorldMapFrame:GetCanvas()
+end
+
+local function _GetCanvasScale()
+    if LEGACY then
+        return 1
+    end
+    return WorldMapFrame.ScrollContainer:GetCanvasScale()
+end
+
 ---A route drawn on the current map, in canvas units with y down.
 ---@class WaypointMapView : WaypointHitTarget
 ---@field path WaypointPath The copy of the route that shows.
@@ -115,8 +143,13 @@ end
 ---normalized position to the canvas edges, so the canvas itself must be under the cursor.
 ---@return number?, number?
 local function _ReadCursor()
-    if not WorldMapFrame:GetCanvas():IsMouseOver() then return nil, nil end
-    local x, y = WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition()
+    if not _GetCanvas():IsMouseOver() then return nil, nil end
+    local x, y
+    if LEGACY then
+        x, y = QuestieCompat335.GetWorldMapCursorPosition()
+    else
+        x, y = WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition()
+    end
     if issecretvalue and (issecretvalue(x) or issecretvalue(y)) then return nil, nil end
     if type(x) ~= "number" or type(y) ~= "number" or x ~= x or y ~= y then return nil, nil end
     return x * shownWidth, y * shownHeight
@@ -125,6 +158,9 @@ end
 -- Paths take no mouse input. They count as hovered only over the bare map, so Questie's icons,
 -- Blizzard's pins and other UI on top win.
 local function _IsCursorOnMap()
+    if LEGACY then
+        return QuestieCompat.GetMouseFocus() == WorldMapButton
+    end
     return QuestieCompat.GetMouseFocus() == WorldMapFrame.ScrollContainer
 end
 
@@ -151,10 +187,10 @@ end
 local ZOOM_REDRAW_DRIFT = 0.25
 
 local function _Update()
-    local mapId = WorldMapFrame:GetMapID()
-    local canvas = WorldMapFrame:GetCanvas()
+    local mapId = _GetMapID()
+    local canvas = _GetCanvas()
     local width, height = canvas:GetWidth(), canvas:GetHeight()
-    local scale = WorldMapFrame.ScrollContainer:GetCanvasScale()
+    local scale = _GetCanvasScale()
     local settled = scale == currentScale
     currentScale = scale
     local changed = false
@@ -176,7 +212,7 @@ local function _Update()
 end
 
 local function _CreateDriver()
-    local canvas = WorldMapFrame:GetCanvas()
+    local canvas = _GetCanvas()
     renderer = WaypointRenderer.New(canvas)
     driver = CreateFrame("Frame", nil, canvas)
     driver:SetScript("OnUpdate", _Update)

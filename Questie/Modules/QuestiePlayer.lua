@@ -1,3 +1,7 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Map = QuestieCompat335.C_Map
+local Enum = QuestieCompat335.Enum
+
 ---@class QuestiePlayer
 ---@field numberOfGroupMembers number @The number of players currently in the group
 ---@field faction number @"Horde" or "Alliance"
@@ -27,7 +31,7 @@ function QuestiePlayer:Initialize()
     _QuestiePlayer.playerLevel = UnitLevel("player")
 
     -- The provider owns the encoding used by its quest masks. Race IDs are not bit positions.
-    local playerRaceId = select(3, UnitRace("player"))
+    local playerRaceId = select(3, QuestieCompat335.UnitRace("player")) -- 3.3.5a: no race ID from UnitRace
     playerRaceFlag = LibQuestieDB.Enum.raceMaskById[playerRaceId]
     if not playerRaceFlag then
         error("QuestieDB has no race mask for race ID " .. tostring(playerRaceId) .. ". Update QuestieDB and reload.")
@@ -35,7 +39,7 @@ function QuestiePlayer:Initialize()
     playerRaceFlagX2 = 2 * playerRaceFlag
 
     playerClassName = select(1, UnitClass("player"))
-    local classId = select(3, UnitClass("player"))
+    local classId = select(3, QuestieCompat335.UnitClass("player")) -- 3.3.5a: no class ID from UnitClass
     playerClassFlag = 2 ^ (classId - 1)
     playerClassFlagX2 = 2 * playerClassFlag
 
@@ -108,7 +112,12 @@ function QuestiePlayer:GetCurrentZoneId()
         return ZoneDB:GetAreaIdByUiMapId(uiMapId)
     end
 
-    return ZoneDB.instanceIdToAreaId[select(8, GetInstanceInfo())]
+    local instanceAreaId = ZoneDB.instanceIdToAreaId[select(8, GetInstanceInfo())]
+    if (not instanceAreaId) and QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: GetInstanceInfo returns no instance ID, so go by the zone's name
+        instanceAreaId = ZoneDB:GetAreaIdByName(GetRealZoneText())
+    end
+    return instanceAreaId
 end
 
 ---@return number

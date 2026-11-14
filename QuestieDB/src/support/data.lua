@@ -14,6 +14,7 @@
 -- Both TOC modes select applicable files before their assignments execute.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local support = {}
 

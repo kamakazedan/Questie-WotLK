@@ -19,10 +19,10 @@ local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 local ICON_PATH = "Interface\\AddOns\\Questie\\Icons\\"
 
 QuestFocusButton.TEXTURES = {
-    incomplete = ICON_PATH .. "poi_incomplete.png",
-    incompleteFocused = ICON_PATH .. "poi_incomplete_focused.png",
-    complete = ICON_PATH .. "poi_complete.png",
-    completeFocused = ICON_PATH .. "poi_complete_focused.png",
+    incomplete = ICON_PATH .. "poi_incomplete.tga",
+    incompleteFocused = ICON_PATH .. "poi_incomplete_focused.tga",
+    complete = ICON_PATH .. "poi_complete.tga",
+    completeFocused = ICON_PATH .. "poi_complete_focused.tga",
 }
 
 ---Same size as the quest focus button slot in TrackerLayout.

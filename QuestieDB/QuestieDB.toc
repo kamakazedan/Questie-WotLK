@@ -22,6 +22,7 @@
 # =============================================================================
 
 # --- Configuration, schema and codecs ---
+Compat335.lua
 src\config.lua
 src\meta\normalize.lua
 src\meta\codec.lua

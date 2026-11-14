@@ -49,7 +49,7 @@ local methods = {
     end,
 
     ["SetItemByID"] = function(self, itemID)
-        self.frame:SetItemByID(itemID)
+        QuestieCompat335.SetTooltipItemByID(self.frame, itemID) -- 3.3.5a: no SetItemByID
     end,
 
     ["SetUnit"] = function(self, unitToken)
@@ -57,7 +57,7 @@ local methods = {
     end,
 
     ["SetSpellByID"] = function(self, spellID)
-        self.frame:SetSpellByID(spellID)
+        QuestieCompat335.SetTooltipSpellByID(self.frame, spellID) -- 3.3.5a: no SetSpellByID
     end,
 
     ["AddLine"] = function(self, text, r, g, b, wrapText)

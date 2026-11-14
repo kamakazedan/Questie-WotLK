@@ -7,6 +7,7 @@
 -- Keep both sets stable: authored spawn data and corrections refer to these values.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 local constants = LibQuestieDB.Enum
 
 constants.phases = {

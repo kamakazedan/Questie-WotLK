@@ -1,3 +1,7 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_QuestLog = QuestieCompat335.C_QuestLog
+local HaveQuestData = HaveQuestData or QuestieCompat335.HaveQuestData
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 

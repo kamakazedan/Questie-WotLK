@@ -278,13 +278,13 @@ do
 		end
 	else
 		realmKey = GetRealmName()
-		charKey = UnitNameUnmodified("player") .. " - " .. realmKey
+		charKey = (UnitNameUnmodified or UnitName)("player") .. " - " .. realmKey -- 3.3.5a: no UnitNameUnmodified
 	end
 
 	local regionTable = { "US", "KR", "EU", "TW", "CN" }
-	local regionName = GetCurrentRegionName()
+	local regionName = GetCurrentRegionName and GetCurrentRegionName() -- 3.3.5a: not available
 	if regionName and regionName == "" then regionName = nil end -- PTR/Beta tends to be ""
-	local regionKey = regionTable[GetCurrentRegion()] or regionName or "TR"
+	local regionKey = regionTable[GetCurrentRegion and GetCurrentRegion() or 1] or regionName or "TR"
 
 	factionrealmKey = factionKey .. " - " .. realmKey
 	factionrealmregionKey = factionrealmKey .. " - " .. regionKey

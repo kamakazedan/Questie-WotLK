@@ -569,6 +569,15 @@ function QuestieOptions.tabs.general:Initialize()
                         type = "select",
                         order = 8.6,
                         values = function()
+                            if QuestieCompat335.isLegacyClient then
+                                -- 3.3.5a has no dialog channel
+                                return {
+                                    Master = MASTER_VOLUME,
+                                    Music = MUSIC_VOLUME,
+                                    SFX = FX_VOLUME or SOUND_VOLUME,
+                                    Ambience = AMBIENCE_VOLUME,
+                                }
+                            end
                             return {
                                 Master = MASTER_VOLUME,
                                 Music = MUSIC_VOLUME,
@@ -577,7 +586,7 @@ function QuestieOptions.tabs.general:Initialize()
                                 Dialog = DIALOG_VOLUME,
                             }
                         end,
-                        sorting = {"Master", "Music", "SFX", "Ambience", "Dialog"},
+                        sorting = QuestieCompat335.isLegacyClient and {"Master", "Music", "SFX", "Ambience"} or {"Master", "Music", "SFX", "Ambience", "Dialog"},
                         style = "dropdown",
                         name = function() return l10n("Sound Channel") end,
                         desc = function() return l10n("The sound channel used for Questie's notification sounds.") end,

@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_QuestLog = QuestieCompat335.C_QuestLog
+
 --[[
 QuestieV1 visibility message, end-to-end:
 

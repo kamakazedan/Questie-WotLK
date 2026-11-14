@@ -62,7 +62,7 @@ function QuestieShutUp:ToggleFilters(value)
         pattern = "^" .. "{rt1}" .. " Questie%s?: "
         -- ruRU clients don't have {rt1} so we also want to filter these
         patternRU = "^" .. "{звезда}" .. " Questie%s?: "
-        pattern_logo = "^|TInterface\\Addons\\Questie\\Icons\\questie.png:0|t "
+        pattern_logo = "^|TInterface\\Addons\\Questie\\Icons\\questie.tga:0|t "
         Questie.Debug(Questie.DEBUG_DEVELOP, "QuestieShutUp toggle on. Pattern:", pattern)
         SafeAddMessageEventFilter("CHAT_MSG_PARTY", QuestieShutUp.FilterFunc)
         SafeAddMessageEventFilter("CHAT_MSG_PARTY_LEADER", QuestieShutUp.FilterFunc)

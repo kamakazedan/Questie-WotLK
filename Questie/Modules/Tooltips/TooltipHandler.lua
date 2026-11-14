@@ -29,7 +29,7 @@ function _QuestieTooltips:AddUnitDataToTooltip()
         if _IsSecret(guid) then return end
     end
 
-    local type, _, _, _, _, npcId, _ = strsplit("-", guid or "");
+    local type, npcId = QuestieCompat335.GetGuidInfo(guid) -- 3.3.5a: hex GUIDs
 
     if name and (type == "Creature" or type == "Vehicle") and (
         name ~= QuestieTooltips.lastGametooltipUnit or
@@ -54,7 +54,7 @@ function _QuestieTooltips:AddUnitDataToTooltip()
         local _, serverid, playerid = strsplit("-", guid or "");
         QuestieTooltips.lastGametooltipUnit = name
         if Questie.devChars[serverid] and tContains(Questie.devChars[serverid], playerid) then
-            GameTooltip:AddLine("|T" .. "Interface\\AddOns\\Questie\\Icons\\questie.png" .. ":0|t |cnIQ5:" .. l10n("Questie Developer") .. "|r")
+            GameTooltip:AddLine("|T" .. "Interface\\AddOns\\Questie\\Icons\\questie.tga" .. ":0|t |cnIQ5:" .. l10n("Questie Developer") .. "|r")
         end
     end
     lastGuid = guid;

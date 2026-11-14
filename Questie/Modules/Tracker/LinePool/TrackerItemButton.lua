@@ -15,7 +15,20 @@ local TrackerFadeTicker = QuestieLoader:ImportModule("TrackerFadeTicker")
 
 local LSM30 = LibStub("LibSharedMedia-3.0")
 local GetItemCount = QuestieCompat.GetItemCount
-local IsItemInRange = C_Item.IsItemInRange or IsItemInRange
+local IsItemInRange = C_Item and C_Item.IsItemInRange
+if not IsItemInRange then
+    -- 3.3.5a: IsItemInRange returns 1, 0 or nil
+    local _IsItemInRange = _G.IsItemInRange
+    IsItemInRange = function(item, unit)
+        local inRange = _IsItemInRange(item, unit)
+        if inRange == 1 then
+            return true
+        elseif inRange == 0 then
+            return false
+        end
+        return inRange
+    end
+end
 
 ---@param buttonName string
 ---@param OnHighlightEnter function @Callback function to highlight the quest of a line
@@ -24,7 +37,7 @@ function TrackerItemButton.New(buttonName, OnHighlightEnter, OnHighlightLeave)
     local btn = CreateFrame("Button", buttonName, UIParent, "SecureActionButtonTemplate")
     local cooldown = CreateFrame("Cooldown", nil, btn, "CooldownFrameTemplate")
     btn.range = btn:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmallGray")
-    btn.count = btn:CreateFontString(nil, "ARTWORK", "Game10Font_o1")
+    btn.count = btn:CreateFontString(nil, "ARTWORK", QuestieCompat335.isLegacyClient and "NumberFontNormal" or "Game10Font_o1") -- 3.3.5a: no Game10Font_o1
     btn:Hide()
 
     if Questie.db.profile.trackerFadeQuestItemButtons then

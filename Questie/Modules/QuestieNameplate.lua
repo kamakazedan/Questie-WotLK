@@ -6,6 +6,8 @@ local _QuestieNameplate = {}
 -------------------------
 ---@type QuestieTooltips
 local QuestieTooltips = QuestieLoader:ImportModule("QuestieTooltips")
+---@type QuestieDB
+local QuestieDB = QuestieLoader:ImportModule("QuestieDB")
 
 local activeGUIDs = {}
 local npFrames = {}
@@ -35,7 +37,7 @@ function QuestieNameplate:NameplateCreated(token)
         return
     end
 
-    local unitType, _, _, _, _, _, _ = strsplit("-", unitGUID)
+    local unitType = QuestieCompat335.GetGuidInfo(unitGUID) -- 3.3.5a: hex GUIDs
     if unitType ~= "Creature" and unitType ~= "Vehicle" then
         -- We only draw name plates on NPCs/creatures and Vehicles (oddness with Chillmaw being a Vehicle?!?!) and skip players, pets, etc
         return
@@ -68,6 +70,7 @@ end
 
 function QuestieNameplate:UpdateNameplate()
     Questie.Debug(Questie.DEBUG_SPAM, "[QuestieNameplate:UpdateNameplate]")
+    _QuestieNameplate.LegacyRequestRefresh() -- 3.3.5a nameplates (see the end of this file)
 
     for guid, token in pairs(activeGUIDs) do
         local unitName, _ = UnitName(token)
@@ -143,6 +146,7 @@ function QuestieNameplate:HideCurrentFrames()
         activeGUIDs[guid] = nil
         _QuestieNameplate.RemoveFrame(guid)
     end
+    _QuestieNameplate.LegacyHideAll() -- 3.3.5a nameplates (see the end of this file)
 end
 
 ---@param guid string
@@ -152,7 +156,7 @@ function QuestieNameplate.GetIcon(guid)
         return nil
     end
 
-    local _, _, _, _, _, npcId, _ = strsplit("-", guid)
+    local _, npcId = QuestieCompat335.GetGuidInfo(guid) -- 3.3.5a: hex GUIDs
     if (not npcId) then
         return nil
     end
@@ -181,7 +185,7 @@ function QuestieNameplate:DrawTargetFrame()
         return
     end
 
-    local unitType, _, _, _, _, _, _ = strsplit("-", unitGUID)
+    local unitType = QuestieCompat335.GetGuidInfo(unitGUID) -- 3.3.5a: hex GUIDs
     if unitType ~= "Creature" and unitType ~= "Vehicle" then
         -- We only draw name plates on NPCs/creatures and Vehicles (oddness with Chillmaw being a Vehicle?!?!) and skip players, pets, etc
         return
@@ -227,7 +231,7 @@ function _QuestieNameplate.GetFrame(guid)
         return npFrames[guid]
     end
 
-    local parent = C_NamePlate.GetNamePlateForUnit(activeGUIDs[guid])
+    local parent = C_NamePlate and C_NamePlate.GetNamePlateForUnit(activeGUIDs[guid]) -- no nameplate units on 3.3.5a
 
     local frame = tremove(npUnusedFrames)
 
@@ -353,5 +357,273 @@ function _QuestieNameplate.GetValidIcon(tooltips) -- helper function to get the 
                 end
             end
         end
+    end
+end
+
+-------------------------------------------------------------------------------------------------
+-- 3.3.5a nameplates
+-------------------------------------------------------------------------------------------------
+-- The 3.3.5a client has no nameplate units: there is no UnitGUID("nameplate1") and no
+-- NAME_PLATE_UNIT_ADDED/REMOVED. Its nameplates are unnamed children of WorldFrame, found here by
+-- scanning, and all they tell about their unit is its name. A nameplate gets an icon when its name
+-- is the name of an NPC that is an open quest objective, so another NPC with the same name gets the
+-- icon too.
+
+local LEGACY_UPDATE_INTERVAL = 0.2   -- seconds between checks for new nameplates and changed names
+local LEGACY_OBJECTIVE_CHECK = 1     -- seconds between checks for added or removed objective NPCs
+local LEGACY_NAMEPLATE_BORDER = "interface\\tooltips\\nameplate-border"
+
+local legacyScanner
+local legacyChecked = {}            -- [WorldFrame child] = true once looked at
+local legacyPlates = {}             -- [nameplate] = its name FontString
+local legacyPlateNames = {}         -- [nameplate] = name the icon was chosen for (false: no name)
+local legacyNumChildren = -1
+local legacyNpcNames = {}           -- [npcId] = name, false when the database has none
+local legacyNpcIdsByName = {}       -- [name] = {npcId, ...} for NPCs that are quest objectives
+local legacyObjectiveCount, legacyObjectiveSum
+local legacyRefreshPending = false
+local legacySinceUpdate = 0
+local legacySinceObjectiveCheck = LEGACY_OBJECTIVE_CHECK
+
+---@param frame Frame
+---@return boolean
+local function _IsLegacyNameplate(frame)
+    if frame:GetName() then
+        return false
+    end
+    -- the second region of a nameplate is its border
+    local _, border = frame:GetRegions()
+    if border and border:GetObjectType() == "Texture" then
+        local texture = border:GetTexture()
+        if type(texture) == "string" and texture:lower() == LEGACY_NAMEPLATE_BORDER then
+            return true
+        end
+    end
+    -- Nameplate addons can change that texture. A nameplate also has 11 regions and a health bar
+    -- and a cast bar as its children.
+    local healthBar, castBar = frame:GetChildren()
+    return frame:GetNumRegions() >= 8
+        and healthBar ~= nil and healthBar:GetObjectType() == "StatusBar"
+        and castBar ~= nil and castBar:GetObjectType() == "StatusBar"
+end
+
+---@param plate Frame
+---@return FontString?
+local function _FindNameRegion(plate)
+    local regions = {plate:GetRegions()}
+    for i = 1, #regions do
+        if regions[i]:GetObjectType() == "FontString" then
+            return regions[i] -- the name comes before the level
+        end
+    end
+    return nil
+end
+
+---@param npcId number
+---@return string|false
+local function _GetNpcName(npcId)
+    local name = legacyNpcNames[npcId]
+    if name == nil then
+        name = QuestieDB.QueryNPCSingle(npcId, "name") or false
+        legacyNpcNames[npcId] = name
+    end
+    return name
+end
+
+--- Rebuilds legacyNpcIdsByName when the NPCs with objective tooltips changed.
+---@return boolean changed
+local function _CheckObjectiveNpcs()
+    local count, sum = 0, 0
+    for key in pairs(QuestieTooltips.lookupByKey) do
+        if type(key) == "string" and key:byte(1) == 109 and key:byte(2) == 95 then -- "m_<npcId>"
+            local npcId = tonumber(key:sub(3))
+            if npcId then
+                count = count + 1
+                sum = sum + npcId
+            end
+        end
+    end
+    if count == legacyObjectiveCount and sum == legacyObjectiveSum then
+        return false
+    end
+    legacyObjectiveCount, legacyObjectiveSum = count, sum
+
+    legacyNpcIdsByName = {}
+    for key in pairs(QuestieTooltips.lookupByKey) do
+        if type(key) == "string" and key:byte(1) == 109 and key:byte(2) == 95 then
+            local npcId = tonumber(key:sub(3))
+            local name = npcId and _GetNpcName(npcId)
+            if name then
+                local npcIds = legacyNpcIdsByName[name]
+                if not npcIds then
+                    npcIds = {}
+                    legacyNpcIdsByName[name] = npcIds
+                end
+                npcIds[#npcIds + 1] = npcId
+            end
+        end
+    end
+    return true
+end
+
+---@param name string
+---@return string? icon
+local function _GetIconForName(name)
+    local npcIds = legacyNpcIdsByName[name]
+    if not npcIds then
+        return nil
+    end
+    for i = 1, #npcIds do
+        local icon = _QuestieNameplate.GetValidIcon(QuestieTooltips.lookupByKey["m_" .. npcIds[i]])
+        if icon then
+            return icon
+        end
+    end
+    return nil
+end
+
+---@param plate Frame
+---@return Frame?
+local function _GetLegacyFrame(plate)
+    local frame = npFrames[plate]
+    if frame then
+        return frame
+    end
+
+    frame = tremove(npUnusedFrames)
+    if not frame then
+        if npFramesCount >= 300 then
+            return nil -- to avoid memory issues
+        end
+        frame = CreateFrame("Frame")
+        npFramesCount = npFramesCount + 1
+        frame.Icon = frame:CreateTexture(nil, "ARTWORK")
+        frame.Icon:SetAllPoints(frame)
+    end
+
+    local iconScale = Questie.db.profile.nameplateScale
+    frame:SetParent(plate)
+    frame:SetFrameStrata("HIGH")
+    frame:SetFrameLevel(10)
+    frame:SetWidth(16 * iconScale)
+    frame:SetHeight(16 * iconScale)
+    frame:EnableMouse(false)
+    frame:ClearAllPoints()
+    frame:SetPoint("LEFT", plate, "LEFT", Questie.db.profile.nameplateX, Questie.db.profile.nameplateY)
+    frame.lastIcon = nil
+
+    npFrames[plate] = frame
+    return frame
+end
+
+---@param plate Frame
+local function _UpdateLegacyPlate(plate)
+    local nameRegion = legacyPlates[plate]
+    local name = nameRegion and nameRegion:GetText()
+    legacyPlateNames[plate] = name or false
+
+    local icon = name and plate:IsShown() and Questie.db.profile.nameplateEnabled and _GetIconForName(name)
+    local frame = icon and _GetLegacyFrame(plate)
+    if frame then
+        if frame.lastIcon ~= icon then
+            frame.lastIcon = icon
+            frame.Icon:SetTexture(icon)
+        end
+        frame:Show()
+    else
+        _QuestieNameplate.RemoveFrame(plate)
+    end
+end
+
+local function _OnPlateShow(plate)
+    if Questie.db.profile.nameplateEnabled then
+        _UpdateLegacyPlate(plate)
+    end
+end
+
+local function _OnPlateHide(plate)
+    legacyPlateNames[plate] = nil
+    _QuestieNameplate.RemoveFrame(plate)
+end
+
+local function _ScanWorldFrame()
+    local numChildren = WorldFrame:GetNumChildren()
+    if numChildren == legacyNumChildren then
+        return
+    end
+    legacyNumChildren = numChildren
+
+    local children = {WorldFrame:GetChildren()}
+    for i = 1, #children do
+        local frame = children[i]
+        if not legacyChecked[frame] then
+            legacyChecked[frame] = true
+            if _IsLegacyNameplate(frame) then
+                local nameRegion = _FindNameRegion(frame)
+                if nameRegion then
+                    legacyPlates[frame] = nameRegion
+                    frame:HookScript("OnShow", _OnPlateShow)
+                    frame:HookScript("OnHide", _OnPlateHide)
+                    if frame:IsShown() then
+                        _UpdateLegacyPlate(frame)
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function _OnLegacyUpdate(_, elapsed)
+    legacySinceUpdate = legacySinceUpdate + elapsed
+    if legacySinceUpdate < LEGACY_UPDATE_INTERVAL then
+        return
+    end
+    legacySinceObjectiveCheck = legacySinceObjectiveCheck + legacySinceUpdate
+    legacySinceUpdate = 0
+
+    if not Questie.db.profile.nameplateEnabled then
+        return
+    end
+
+    if legacySinceObjectiveCheck >= LEGACY_OBJECTIVE_CHECK then
+        legacySinceObjectiveCheck = 0
+        if _CheckObjectiveNpcs() then
+            legacyRefreshPending = true
+        end
+    end
+
+    _ScanWorldFrame()
+
+    local refreshAll = legacyRefreshPending
+    legacyRefreshPending = false
+    for plate, nameRegion in pairs(legacyPlates) do
+        if plate:IsShown() and (refreshAll or legacyPlateNames[plate] ~= (nameRegion:GetText() or false)) then
+            -- shown for another unit, or its quest objectives changed
+            _UpdateLegacyPlate(plate)
+        end
+    end
+end
+
+--- Starts looking for nameplates (3.3.5a only).
+function QuestieNameplate.StartLegacyScanner()
+    if legacyScanner then
+        return
+    end
+    legacyScanner = CreateFrame("Frame")
+    legacyScanner:SetScript("OnUpdate", _OnLegacyUpdate)
+end
+
+--- Quest objectives changed: the next update chooses the icons again.
+function _QuestieNameplate.LegacyRequestRefresh()
+    if legacyScanner then
+        legacyRefreshPending = true
+        legacySinceObjectiveCheck = LEGACY_OBJECTIVE_CHECK
+    end
+end
+
+function _QuestieNameplate.LegacyHideAll()
+    for plate in pairs(legacyPlateNames) do
+        legacyPlateNames[plate] = nil
+        _QuestieNameplate.RemoveFrame(plate)
     end
 end

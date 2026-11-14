@@ -2,6 +2,7 @@
 -- Presets contain area IDs, then paths, then ordered { x, y } coordinate pairs.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 local constants = LibQuestieDB.Enum
 
 constants.waypointPresets = {

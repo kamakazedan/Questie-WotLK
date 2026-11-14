@@ -1,4 +1,4 @@
-<Ui xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
     <!-- Names the embedded libraries' load interval after this XML. Apart from HereBeDragons, which is a set of
          Questie modules and gets its own rows, none of them call QuestieLoader, so they cannot be told apart
          from one another; the stamp draws the boundary where the group starts.-->
@@ -27,7 +27,7 @@
     <Script file="Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua"/>
     <Script file="Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua"/>
 
-    <Script file="Libs\Krowi_WorldMapButtons\Krowi_WorldMapButtons.lua"/>
+    <!-- 3.3.5a: Krowi_WorldMapButtons needs the newer world map; Questie places its own button. -->
 
     <!-- Questie's map and menu libraries. Keep HereBeDragons core before its Pins extension. -->
     <Include file="Libs\LibUIDropDownMenu\LibUIDropDownMenu.xml"/>

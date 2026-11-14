@@ -1,3 +1,5 @@
+-- 3.3.5a: no friendship reputations (C_GossipInfo)
+local C_GossipInfo = C_GossipInfo or {GetFriendshipReputation = function() return nil end}
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -52,7 +54,7 @@ function QuestieReputation:Update(isInit)
 
     -- Handle Scyers/Aldor standing when they are not in reputation tab yet for TBC or later
     if isInit and Expansions.Current >= Expansions.Tbc then
-        local _, _, raceId = UnitRace("player")
+        local _, _, raceId = QuestieCompat335.UnitRace("player") -- 3.3.5a: no race ID from UnitRace
         local scryers = QuestieDB.factionIDs.THE_SCRYERS
         local aldor = QuestieDB.factionIDs.THE_ALDOR
         if raceId == 10 then -- Blood Elf

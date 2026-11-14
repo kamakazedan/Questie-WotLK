@@ -20,6 +20,7 @@
 -- decoded Scalar row as its cache row.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local shared = {}
 

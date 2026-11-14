@@ -2,6 +2,7 @@
 -- Named sets live under byExpansion; src/api.lua publishes faction masks for the active flavor.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 local constants = LibQuestieDB.Enum
 
 -- Actual race IDs to single-bit requiredRaces mask values, not bit indices or a per-flavor playability list.

@@ -18,7 +18,7 @@ Scripts
 -------------------------------------------------------------------------------]]
 local function Button_OnClick(frame, ...)
 	AceGUI:ClearFocus()
-	PlaySound(852) -- SOUNDKIT.IG_MAINMENU_OPTION
+	PlaySound(QuestieCompat335 and QuestieCompat335.isLegacyClient and QuestieCompat335.Sounds[852] or 852) -- SOUNDKIT.IG_MAINMENU_OPTION
 	frame.obj:Fire("OnClick", ...)
 end
 

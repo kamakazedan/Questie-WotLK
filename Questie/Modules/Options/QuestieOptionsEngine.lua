@@ -19,6 +19,22 @@ local l10n = QuestieLoader:ImportModule("l10n")
 
 local coYield = coroutine.yield
 
+-- 3.3.5a has neither Blizzard's settings panel (Settings) nor the newer frame templates this engine
+-- draws with. There the settings are Questie's AceConfig window (QuestieOptions), which is also added
+-- to the Interface Options panel, and the functions below hand over to it.
+local LEGACY = QuestieCompat335.isLegacyClient
+
+local function _LegacyOptions()
+    return QuestieLoader:ImportModule("QuestieOptions")
+end
+
+local function _LegacyNotifyChange()
+    local registry = LibStub("AceConfigRegistry-3.0", true)
+    if registry and registry.tables and registry.tables["Questie"] then
+        registry:NotifyChange("Questie")
+    end
+end
+
 ---- How the settings fit together
 --
 -- Control - An element the user interacts with to adjust settings, like a checkbox or a slider.
@@ -364,6 +380,10 @@ end
 ---Runs in the startup coroutine, because all the tab definitions together are too much for one frame in Hardcore.
 ---@async
 function QuestieOptionsEngine:Initialize()
+    if LEGACY then
+        visibleTabs = {}
+        return
+    end
     local tabs = {}
     for key, tabFile in pairs(self.tabs) do
         local data = tabFile:Initialize()
@@ -404,6 +424,10 @@ end
 ---Hidden canvases catch up when they are next shown. Must stay synchronous, because clicks and timers call this
 ---outside of a coroutine, where yielding throws.
 function QuestieOptionsEngine:RefreshStates()
+    if LEGACY then
+        _LegacyNotifyChange()
+        return
+    end
     for _, canvas in ipairs(canvases) do
         if canvas:IsVisible() then
             _RefreshCanvas(canvas)
@@ -427,12 +451,24 @@ function QuestieOptionsEngine:QueueRefresh()
 end
 
 function QuestieOptionsEngine:HideFrame()
+    if LEGACY then
+        _LegacyOptions():HideFrame()
+        return
+    end
     if QuestieOptionsEngine.popup then
         QuestieOptionsEngine.popup:Hide()
     end
 end
 
 function QuestieOptionsEngine:ShowFrame()
+    if LEGACY then
+        if QuestieConfigFrame and not QuestieConfigFrame:IsShown() then
+            _LegacyOptions():ToggleConfigWindow()
+        elseif not QuestieConfigFrame then
+            print(Questie:Colorize(l10n("Please wait a moment for Questie to finish loading")))
+        end
+        return
+    end
     -- Only reachable right after login, because Initialize runs for just a few frames
     if not visibleTabs then
         print(Questie:Colorize(l10n("Please wait a moment for Questie to finish loading")))
@@ -447,10 +483,21 @@ end
 
 ---@return boolean
 function QuestieOptionsEngine:IsShown()
+    if LEGACY then
+        return QuestieConfigFrame ~= nil and QuestieConfigFrame:IsShown()
+    end
     return QuestieOptionsEngine.popup ~= nil and QuestieOptionsEngine.popup:IsShown()
 end
 
 function QuestieOptionsEngine:ToggleConfigWindow()
+    if LEGACY then
+        if QuestieConfigFrame then
+            _LegacyOptions():ToggleConfigWindow()
+        else
+            print(Questie:Colorize(l10n("Please wait a moment for Questie to finish loading")))
+        end
+        return
+    end
     if QuestieOptionsEngine:IsShown() then
         QuestieOptionsEngine:HideFrame()
     else

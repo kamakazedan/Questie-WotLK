@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_QuestLog = QuestieCompat335.C_QuestLog
+
 ---@class TrackerLinePool
 local TrackerLinePool = QuestieLoader:CreateModule("TrackerLinePool")
 -------------------------
@@ -157,7 +160,7 @@ function TrackerLinePool.UpdateWrappedLineWidths(trackerLineWidth)
     for _, line in pairs(linePool) do
         if Questie.db.profile.TrackerWidth == 0 then
             if line.mode == "objective" then
-                if line.label:GetNumLines() > 1 and line:GetHeight() > Questie.db.profile.trackerFontSizeObjective then
+                if QuestieCompat335.GetNumLines(line.label) > 1 and line:GetHeight() > Questie.db.profile.trackerFontSizeObjective then
                     line.label:SetText(line.label:GetText())
 
                     if line.altButton then

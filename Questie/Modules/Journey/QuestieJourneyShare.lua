@@ -30,7 +30,7 @@ local function _GetOtherCharactersWithJourney()
 			currentKey = name
 		end
     else
-        currentKey = UnitNameUnmodified("player") .. " - " .. GetRealmName()
+        currentKey = (UnitNameUnmodified or UnitName)("player") .. " - " .. GetRealmName() -- 3.3.5a: no UnitNameUnmodified
     end
 
     local results = {}

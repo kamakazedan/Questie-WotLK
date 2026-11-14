@@ -40,8 +40,8 @@ local expansionDefinitions = {
     { key = "classic", label = EXPANSION_NAME0, order = Expansions.Era },
     { key = "tbc", label = EXPANSION_NAME1, order = Expansions.Tbc },
     { key = "wotlk", label = EXPANSION_NAME2, order = Expansions.Wotlk },
-    { key = "cata", label = EXPANSION_NAME3, order = Expansions.Cata },
-    { key = "mop", label = EXPANSION_NAME4, order = Expansions.MoP },
+    { key = "cata", label = EXPANSION_NAME3 or "Cataclysm", order = Expansions.Cata }, -- 3.3.5a: no EXPANSION_NAME3/4
+    { key = "mop", label = EXPANSION_NAME4 or "Mists of Pandaria", order = Expansions.MoP },
 }
 
 local expansionKeyByOrder = {}

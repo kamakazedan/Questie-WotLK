@@ -6,6 +6,8 @@
 -- Questie is the first consumer, but nothing here assumes it.
 
 local ADDON_NAME, LibQuestieDB = ...
+ADDON_NAME = ADDON_NAME or "QuestieDB" -- 3.3.5a
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local config = LibQuestieDB.config
 local shared = LibQuestieDB.shared

@@ -21,6 +21,25 @@ local next, Minimap, CreateFrame, AddonCompartmentFrame = next, Minimap, CreateF
 lib.tooltip = lib.tooltip or CreateFrame("GameTooltip", "LibDBIconTooltip", UIParent, "GameTooltipTemplate")
 local isDraggingButton = false
 
+-- 3.3.5a: alpha animations have no SetFromAlpha/SetToAlpha/SetToFinalAlpha there; they change alpha
+-- relatively and restore it when finished, so the final alpha is applied from OnFinished instead.
+local function createFadeOut(button)
+	local group = button:CreateAnimationGroup()
+	local animOut = group:CreateAnimation("Alpha")
+	animOut:SetOrder(1)
+	animOut:SetDuration(0.2)
+	animOut:SetStartDelay(1)
+	if animOut.SetFromAlpha then
+		animOut:SetFromAlpha(1)
+		animOut:SetToAlpha(0)
+		group:SetToFinalAlpha(true)
+	else
+		animOut:SetChange(-1)
+		group:SetScript("OnFinished", function() button:SetAlpha(0) end)
+	end
+	return group
+end
+
 function lib:IconCallback(event, name, key, value)
 	if lib.objects[name] then
 		if key == "icon" then
@@ -291,14 +310,7 @@ local function createButton(name, object, db, customCompartmentIcon)
 	button:SetScript("OnMouseDown", onMouseDown)
 	button:SetScript("OnMouseUp", onMouseUp)
 
-	button.fadeOut = button:CreateAnimationGroup()
-	local animOut = button.fadeOut:CreateAnimation("Alpha")
-	animOut:SetOrder(1)
-	animOut:SetDuration(0.2)
-	animOut:SetFromAlpha(1)
-	animOut:SetToAlpha(0)
-	animOut:SetStartDelay(1)
-	button.fadeOut:SetToFinalAlpha(true)
+	button.fadeOut = createFadeOut(button)
 
 	if lib.loggedIn then
 		updatePosition(button, db and db.minimapPos)
@@ -494,7 +506,7 @@ end
 function lib:ResetButtonHighlightTexture(name)
 	local button = lib:GetMinimapButton(name)
 	if button then
-		button:SetHighlightTexture(136477) --"Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
+		button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight") -- 3.3.5a: path instead of FileDataID 136477
 	end
 end
 
@@ -529,7 +541,7 @@ function lib:ResetButtonBorder(name)
 		button.border:Show()
 		button.border:ClearAllPoints()
 		button.border:SetPoint("TOPLEFT", 0, 0)
-		button.border:SetTexture(136430) --"Interface\\Minimap\\MiniMap-TrackingBorder"
+		button.border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder") -- 3.3.5a: path instead of FileDataID 136430
 		if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
 			button.border:SetSize(50, 50)
 		else
@@ -568,7 +580,7 @@ function lib:ResetButtonBackground(name)
 	if button.background then
 		button.background:Show()
 		button.background:ClearAllPoints()
-		button.background:SetTexture(136467) --"Interface\\Minimap\\UI-Minimap-Background"
+		button.background:SetTexture("Interface\\Minimap\\UI-Minimap-Background") -- 3.3.5a: path instead of FileDataID 136467
 		if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
 			button.background:SetSize(24, 24)
 			button.background:SetPoint("CENTER", 0, 0)
@@ -694,14 +706,7 @@ for name, button in next, lib.objects do
 	button:SetScript("OnMouseUp", onMouseUp)
 
 	if not button.fadeOut then -- Upgrade to 39
-		button.fadeOut = button:CreateAnimationGroup()
-		local animOut = button.fadeOut:CreateAnimation("Alpha")
-		animOut:SetOrder(1)
-		animOut:SetDuration(0.2)
-		animOut:SetFromAlpha(1)
-		animOut:SetToAlpha(0)
-		animOut:SetStartDelay(1)
-		button.fadeOut:SetToFinalAlpha(true)
+		button.fadeOut = createFadeOut(button)
 	end
 end
 lib:SetButtonRadius(lib.radius) -- Upgrade to 40

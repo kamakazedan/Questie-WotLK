@@ -7,6 +7,7 @@
 -- of the block and is handed back afterwards, so nothing leaks into the consumer's environment.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local modules = {}
 LibQuestieDB.__derivedModules = modules

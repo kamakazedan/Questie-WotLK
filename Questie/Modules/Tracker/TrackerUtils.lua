@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Map = QuestieCompat335.C_Map
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -94,7 +97,8 @@ local bindTruthTable = {
     ["disabled"] = function() return false end,
 }
 
-local _QuestLogScrollBar = (QuestLogListScrollFrame and QuestLogListScrollFrame.ScrollBar) or QuestLogListScrollFrameScrollBar
+-- 3.3.5a: the quest log list is QuestLogScrollFrame
+local _QuestLogScrollBar = (QuestLogListScrollFrame and QuestLogListScrollFrame.ScrollBar) or QuestLogListScrollFrameScrollBar or QuestLogScrollFrameScrollBar
 
 ---@param quest table The table provided by QuestieDB.GetQuest(questId)
 function TrackerUtils:ShowQuestLog(quest)
@@ -121,8 +125,10 @@ function TrackerUtils:ShowQuestLog(quest)
     QuestieCompat.SelectQuestLogEntry(questLogIndex)
 
     -- Scroll to the quest in the quest log
-    local scrollSteps = _QuestLogScrollBar:GetValueStep()
-    _QuestLogScrollBar:SetValue(questLogIndex * scrollSteps - scrollSteps * 3)
+    if _QuestLogScrollBar then
+        local scrollSteps = _QuestLogScrollBar:GetValueStep()
+        _QuestLogScrollBar:SetValue(questLogIndex * scrollSteps - scrollSteps * 3)
+    end
 
     if not questFrame:IsShown() then
         if not InCombatLockdown() then
@@ -669,6 +675,9 @@ local function _GetWorldPlayerPosition()
     end
 
     local worldPosition = select(2, C_Map.GetWorldPosFromMapPos(mapID, mapPosition))
+    if not worldPosition then
+        return nil
+    end
     local position = {
         x = worldPosition.x,
         y = worldPosition.y

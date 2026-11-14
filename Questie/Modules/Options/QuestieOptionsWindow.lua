@@ -63,7 +63,7 @@ function QuestieOptionsWindow.Create()
         end
     end)
 
-    window:SetPortraitTextureRaw("Interface\\AddOns\\Questie\\Icons\\questie_portrait.png", nil, nil, "TRILINEAR")
+    window:SetPortraitTextureRaw("Interface\\AddOns\\Questie\\Icons\\questie_portrait.tga", nil, nil, "TRILINEAR")
     local portrait = window.PortraitContainer.portrait
     if Questie.IsForever then
         if portrait then portrait:SetTexCoord(0.16, 0.86, 0.17, 0.87) end

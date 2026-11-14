@@ -69,7 +69,7 @@ local methods = {
 
 	["SetImageByAtlas"] = function(self, atlasString)
 		local image = self.image
-		image:SetAtlas(atlasString)
+		if image.SetAtlas then image:SetAtlas(atlasString) end -- 3.3.5a: no atlases
 	end,
 
 	["SetImageSize"] = function(self, width, height)
@@ -123,7 +123,7 @@ local function Constructor()
 
 	local highlight = frame:CreateTexture(nil, "HIGHLIGHT")
 	highlight:SetAllPoints(image)
-	highlight:SetTexture(136580) -- Interface\\PaperDollInfoFrame\\UI-Character-Tab-Highlight
+	highlight:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-Tab-Highlight") -- 3.3.5a: path instead of FileDataID 136580
 	highlight:SetTexCoord(0, 1, 0.23, 0.77)
 	highlight:SetBlendMode("ADD")
 

@@ -3,6 +3,7 @@
 -- Geographic groups include later starting-area IDs; instance floors stay beside their parent.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 local constants = LibQuestieDB.Enum
 
 constants.zoneIDs = {

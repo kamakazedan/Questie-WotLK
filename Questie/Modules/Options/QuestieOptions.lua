@@ -54,6 +54,31 @@ function QuestieOptions:Initialize()
 
     LibStub("AceConfig-3.0"):RegisterOptionsTable("Questie", optionsTable)
     --AceConfigDialog:AddToBlizOptions("Questie", "Questie");
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: Blizzard's Interface Options panel (Questie's own panel needs the Settings API)
+        local panel = CreateFrame("Frame")
+        panel.name = "Questie"
+        local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+        title:SetPoint("TOPLEFT", 16, -16)
+        title:SetText("Questie")
+        local openButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+        openButton:SetWidth(200)
+        openButton:SetHeight(24)
+        openButton:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
+        openButton:SetText(l10n("Open Questie options"))
+        openButton:SetScript("OnClick", function()
+            if InterfaceOptionsFrame then
+                HideUIPanel(InterfaceOptionsFrame)
+            end
+            if GameMenuFrame then
+                HideUIPanel(GameMenuFrame)
+            end
+            if QuestieConfigFrame and not QuestieConfigFrame:IsShown() then
+                QuestieOptions:ToggleConfigWindow()
+            end
+        end)
+        InterfaceOptions_AddCategory(panel)
+    end
 
     coroutine.yield()
 
@@ -102,7 +127,7 @@ end
 -- Open the configuration window
 function QuestieOptions:ToggleConfigWindow()
     if not QuestieConfigFrame:IsShown() then
-        PlaySound(882)
+        QuestieCompat335.PlaySound(882) -- 3.3.5a: sound names, not kit IDs
         AceConfigDialog:Open("Questie", QuestieConfigFrame)
     else
         QuestieConfigFrame:Hide()

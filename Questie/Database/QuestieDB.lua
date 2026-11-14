@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_QuestLog = QuestieCompat335.C_QuestLog
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -2149,8 +2152,11 @@ end
 function QuestieDB.GetQuestIDFromName(name, questgiverGUID, questStarter)
     local questID = 0 -- worst case, we end up returning an ID of 0 if we can't find a match; any function relying on this one should handle 0 cleanly
     if questgiverGUID then
-        local questgiverID = tonumber(questgiverGUID:match("-(%d+)-%x+$"), 10)
-        local unit_type = strsplit("-", questgiverGUID)
+        -- 3.3.5a: GUIDs are hex ("0xF130..."), parse both formats
+        local unit_type, questgiverID = QuestieCompat335.GetGuidInfo(questgiverGUID)
+        if unit_type == "Vehicle" then
+            unit_type = "Creature"
+        end
         local questsStarted
         local questsEnded
         if unit_type == "Creature" then -- if questgiver is an NPC

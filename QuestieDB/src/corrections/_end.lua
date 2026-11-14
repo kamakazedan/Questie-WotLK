@@ -5,6 +5,7 @@
 -- registered providers borrow their private stand-in only for the duration of invocation.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local compat = LibQuestieDB.CorrectionCompat
 local modules = compat.modules or {}

@@ -410,13 +410,13 @@ function QuestieSearchResults:ItemDetailsFrame(f, itemId)
     -- C_Item.RequestLoadItemDataByID(itemId)
 
     -- Instead we use this:
-    QuestieScanningTooltip:SetItemByID(itemId)
+    QuestieCompat335.SetTooltipItemByID(QuestieScanningTooltip, itemId) -- 3.3.5a: no SetItemByID
 
     -- Then we wait for client to say it cached the item
     local ticker
     ticker = C_Timer.NewTicker(0.05, function()
         -- When it does...
-        if C_Item.IsItemDataCachedByID(itemId) then
+        if (C_Item and C_Item.IsItemDataCachedByID or QuestieCompat335.IsItemDataCachedByID)(itemId) then
             ticker:Cancel()
             -- We still need another tiny delay because the following content might still clip the last few lines otherwise
             C_Timer.After(0.05, function() QuestieSearchResults:ItemsFrameAfterTicker(f, itemId) end)

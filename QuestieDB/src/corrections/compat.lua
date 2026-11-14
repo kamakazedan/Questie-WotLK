@@ -9,6 +9,7 @@
 -- namespace only while a registered provider runs, and both globals are restored afterwards.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local compat = {}
 

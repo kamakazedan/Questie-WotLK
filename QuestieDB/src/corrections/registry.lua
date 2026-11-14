@@ -29,6 +29,7 @@
 --     to the written datatype — which is what makes write-through affordable (ADR 0009).
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local registry = {}
 

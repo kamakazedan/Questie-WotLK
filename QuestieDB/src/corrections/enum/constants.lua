@@ -9,6 +9,7 @@
 -- additionally publishes factionRaceMasks, classKeys and npcFlags for the active flavor; standalone enum loading does not.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local constants = {}
 

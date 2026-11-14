@@ -1,3 +1,8 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Map = QuestieCompat335.C_Map
+local Enum = QuestieCompat335.Enum
+local GetQuestID = GetQuestID or QuestieCompat335.GetQuestID
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -409,7 +414,7 @@ local function _AppendUniversalText(input)
     local mapID = GetBestMapForUnit(player)
 
     if mapID then
-        local pos = GetPlayerMapPosition(mapID, player);
+        local pos = GetPlayerMapPosition(mapID, player) or {x = 0, y = 0};
         PosX = pos.x * 100
         PosY = pos.y * 100
         text = text .. "\n|cFFAAAAAAPlayer Coords:|r  [" .. mapID .. "]  " .. format("(%.3f, %.3f)", PosX, PosY)
@@ -417,7 +422,7 @@ local function _AppendUniversalText(input)
         local instanceId = select(8, GetInstanceInfo())
         local zoneId = ZoneDB.instanceIdToAreaId[instanceId]
         if (not zoneId) then
-            zoneId = "Unknown instanceId " .. instanceId
+            zoneId = "Unknown instanceId " .. tostring(instanceId)
         end
         text = text .. "\n|cFFAAAAAAPlayer Coords:|r  [" .. zoneId .. "]  -1, -1"
     end
@@ -435,6 +440,9 @@ end
 
 -- Missing itemID when looting
 function QuestieDebugOffer.LootWindow()
+    if not (GetLootInfo and GetLootSourceInfo and GetItemInfoFromHyperlink) then
+        return -- 3.3.5a: the loot window cannot tell where the loot comes from
+    end
     local lootInfo = GetLootInfo()
     local debugContainer, _ = GetLootSourceInfo(1) -- happens early in case the rest of the code is so slow that the container closes before we're ready
     local inInstance, _ = IsInInstance()
@@ -577,9 +585,8 @@ function QuestieDebugOffer.NPCTarget()
         return
     end
     local targetGUID = UnitGUID(target)
-    local unit_type = strsplit("-", tostring(targetGUID)) -- determine target type
+    local unit_type, npcID = QuestieCompat335.GetGuidInfo(targetGUID) -- 3.3.5a: hex GUIDs
     if unit_type == "Creature" then -- if target is an NPC
-        local npcID = tonumber(targetGUID:match("-(%d+)-%x+$"), 10) -- obtain NPC ID
         if targetTimeout[npcID] == true then -- if target was already targeted recently
             Questie.Debug(Questie.DEBUG_DEVELOP, "[QuestieDebugOffer] - NPCTarget - Targeted NPC was targeted recently, ignoring")
             return
@@ -592,7 +599,7 @@ function QuestieDebugOffer.NPCTarget()
             if QuestieDB.QueryNPCSingle(npcID, "name") == nil then -- if ID not in our DB
                 debugIndex = debugIndex + 1
                 DebugInformation[debugIndex] = "Targeted NPC not present in NPC DB!"
-                local npcName = UnitFullName(target)
+                local npcName = (UnitFullName or UnitName)(target) -- 3.3.5a: no UnitFullName
                 local npcLevel = UnitLevel(target)
                 local npcHealth = UnitHealth(target)
                 local npcHealthMax = UnitHealthMax(target)

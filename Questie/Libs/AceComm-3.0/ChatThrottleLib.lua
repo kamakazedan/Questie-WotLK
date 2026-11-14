@@ -242,17 +242,25 @@ function ChatThrottleLib:Init()
 			end)
 		end
 		--SendAddonMessage
-		hooksecurefunc(_G.C_ChatInfo, "SendAddonMessage", function(...)
-			return ChatThrottleLib.Hook_SendAddonMessage(...)
-		end)
+		if _G.C_ChatInfo and _G.C_ChatInfo.SendAddonMessage then
+			hooksecurefunc(_G.C_ChatInfo, "SendAddonMessage", function(...)
+				return ChatThrottleLib.Hook_SendAddonMessage(...)
+			end)
+		else -- 3.3.5a: the global API
+			hooksecurefunc("SendAddonMessage", function(...)
+				return ChatThrottleLib.Hook_SendAddonMessage(...)
+			end)
+		end
 	end
 
 	-- v26: Hook SendAddonMessageLogged for traffic logging
 	if not self.securelyHookedLogged then
 		self.securelyHookedLogged = true
-		hooksecurefunc(_G.C_ChatInfo, "SendAddonMessageLogged", function(...)
-			return ChatThrottleLib.Hook_SendAddonMessageLogged(...)
-		end)
+		if _G.C_ChatInfo and _G.C_ChatInfo.SendAddonMessageLogged then -- 3.3.5a: not available
+			hooksecurefunc(_G.C_ChatInfo, "SendAddonMessageLogged", function(...)
+				return ChatThrottleLib.Hook_SendAddonMessageLogged(...)
+			end)
+		end
 	end
 
 	-- v29: Hook BNSendGameData for traffic logging
@@ -262,7 +270,7 @@ function ChatThrottleLib:Init()
 			hooksecurefunc(_G.C_BattleNet, "SendGameData", function(...)
 				return ChatThrottleLib.Hook_BNSendGameData(...)
 			end)
-		else
+		elseif _G.BNSendGameData then -- 3.3.5a: may not exist
 			hooksecurefunc("BNSendGameData", function(...)
 				return ChatThrottleLib.Hook_BNSendGameData(...)
 			end)
@@ -346,7 +354,7 @@ end
 -- - ... made up of N "Pipe"s (1 for each destination/pipename)
 -- - and each pipe contains messages
 
-local SendAddonMessageResult = Enum.SendAddonMessageResult or {
+local SendAddonMessageResult = (Enum and Enum.SendAddonMessageResult) or { -- 3.3.5a: no Enum table
 	Success = 0,
 	AddonMessageThrottle = 3,
 	NotInGroup = 5,
@@ -388,7 +396,9 @@ end
 
 local function PerformSend(sendFunction, ...)
 	bMyTraffic = true
-	local sendResult = MapToSendResult(xpcall(sendFunction, CallErrorHandler, ...))
+	-- 3.3.5a: xpcall does not forward extra arguments in Lua 5.1, so pack them into a closure
+	local args, argCount = {...}, select("#", ...)
+	local sendResult = MapToSendResult(xpcall(function() return sendFunction(unpack(args, 1, argCount)) end, CallErrorHandler))
 	bMyTraffic = false
 	return sendResult
 end
@@ -555,7 +565,7 @@ function ChatThrottleLib:SendChatMessage(prio, prefix,   text, chattype, languag
 
 	-- Check if there's room in the global available bandwidth gauge to send directly
 	if not self.bQueueing and nSize < self:UpdateAvail() then
-		local sendResult = PerformSend(_G.C_ChatInfo.SendChatMessage or _G.SendChatMessage, text, chattype, language, destination)
+		local sendResult = PerformSend((_G.C_ChatInfo and _G.C_ChatInfo.SendChatMessage) or _G.SendChatMessage, text, chattype, language, destination)
 
 		if not IsThrottledSendResult(sendResult) then
 			local didSend = (sendResult == SendAddonMessageResult.Success)
@@ -575,7 +585,7 @@ function ChatThrottleLib:SendChatMessage(prio, prefix,   text, chattype, languag
 
 	-- Message needs to be queued
 	local msg = NewMsg()
-	msg.f = _G.C_ChatInfo.SendChatMessage or _G.SendChatMessage
+	msg.f = (_G.C_ChatInfo and _G.C_ChatInfo.SendChatMessage) or _G.SendChatMessage
 	msg[1] = text
 	msg[2] = chattype or "SAY"
 	msg[3] = language
@@ -637,7 +647,7 @@ function ChatThrottleLib:SendAddonMessage(prio, prefix, text, chattype, target, 
 		error("ChatThrottleLib:SendAddonMessage(): message length cannot exceed 255 bytes", 2)
 	end
 
-	local sendFunction = _G.C_ChatInfo.SendAddonMessage
+	local sendFunction = (_G.C_ChatInfo and _G.C_ChatInfo.SendAddonMessage) or _G.SendAddonMessage -- 3.3.5a: global API
 	SendAddonMessageInternal(self, sendFunction, prio, prefix, text, chattype, target, queueName, callbackFn, callbackArg)
 end
 
@@ -651,7 +661,7 @@ function ChatThrottleLib:SendAddonMessageLogged(prio, prefix, text, chattype, ta
 		error("ChatThrottleLib:SendAddonMessageLogged(): message length cannot exceed 255 bytes", 2)
 	end
 
-	local sendFunction = _G.C_ChatInfo.SendAddonMessageLogged
+	local sendFunction = (_G.C_ChatInfo and _G.C_ChatInfo.SendAddonMessageLogged) or _G.SendAddonMessage -- 3.3.5a: no logged variant
 	SendAddonMessageInternal(self, sendFunction, prio, prefix, text, chattype, target, queueName, callbackFn, callbackArg)
 end
 

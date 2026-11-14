@@ -26,6 +26,7 @@
 -- after public reads, preserving the same transform-before-legacy-loss order (ADR 0006).
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local derived = {}
 

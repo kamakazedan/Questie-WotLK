@@ -1,3 +1,7 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_QuestLog = QuestieCompat335.C_QuestLog
+local HaveQuestData = HaveQuestData or QuestieCompat335.HaveQuestData
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -243,7 +247,10 @@ _GetObjectiveText = function(objectiveId, objectiveType)
     elseif objectiveType == "reputation" then
         return QuestieReputation.GetFactionName(objectiveId)
     elseif objectiveType == "spell" then
-        return C_Spell.GetSpellName(objectiveId)
+        if C_Spell and C_Spell.GetSpellName then
+            return C_Spell.GetSpellName(objectiveId)
+        end
+        return (GetSpellInfo(objectiveId)) -- 3.3.5a
     end
     return ""
 end

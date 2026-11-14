@@ -78,21 +78,24 @@ function QuestieFrame.CreateIconFrame(frameId, OnEnter)
     -- Frames having same FrameLevel (and Strata) show up inorder which is first :Show() (explicit or implicit).
     --! Do not :SetDrawLayer() for these textures. Use parent frame FrameLevel for z-ordering as needed elsewhere in code.
 
+    -- 3.3.5a: textures have no sublevels, so the three textures use three draw layers instead
+    -- (glow behind the main texture, overlay in front of it).
+
     ---@type IconTexture
-    local texture = newFrame:CreateTexture(nil, "OVERLAY", nil, 0)
+    local texture = newFrame:CreateTexture(nil, "ARTWORK")
     texture:SetAllPoints(newFrame) -- Always same size and location as newFrame
     texture:SetTexelSnappingBias(0)
     texture:SetSnapToPixelGrid(false)
     -- .texture is shown always when newFrame is shown. No :Hide() or :Show()
 
-    local overlayTexture = newFrame:CreateTexture(nil, "OVERLAY", nil, 1)
+    local overlayTexture = newFrame:CreateTexture(nil, "OVERLAY")
     overlayTexture:SetAllPoints(newFrame) -- Always same size and location as newFrame
     overlayTexture:SetTexelSnappingBias(0)
     overlayTexture:SetSnapToPixelGrid(false)
     overlayTexture:Hide()
 
     ---@type IconTexture
-    local glowTexture = newFrame:CreateTexture(nil, "OVERLAY", nil, -1)
+    local glowTexture = newFrame:CreateTexture(nil, "BORDER")
     glowTexture:SetPoint("CENTER", 0, 0) -- Center of the newFrame
     glowTexture:SetTexelSnappingBias(0)
     glowTexture:SetSnapToPixelGrid(false)
@@ -116,7 +119,12 @@ function QuestieFrame.CreateIconFrame(frameId, OnEnter)
 
     newFrame:SetScript("OnEnter", OnEnter); --Script Toolip
     newFrame:SetScript("OnLeave", _QuestieFrame.OnLeave) --Script Exit Tooltip
-    newFrame:RegisterForClicks("LeftButtonUp")
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a cannot pass clicks through; OnClick hands right clicks to the map instead.
+        newFrame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    else
+        newFrame:RegisterForClicks("LeftButtonUp")
+    end
     QuestieFrame.EnsureRightClickPassThrough(newFrame)
     newFrame:SetScript("OnClick", _QuestieFrame.OnClick);
 
@@ -192,6 +200,10 @@ end
 -- SetPassThroughButtons is blocked in combat, so frames acquired then retry once combat ends.
 ---@param frame IconFrame
 function QuestieFrame.EnsureRightClickPassThrough(frame)
+    if not frame.ShouldButtonPassThrough then
+        -- 3.3.5a: no click pass-through (see OnClick)
+        return
+    end
     if frame:ShouldButtonPassThrough("RightButton") then
         return
     end
@@ -214,8 +226,16 @@ end
 function _QuestieFrame.OnClick(self, button)
     local uiMapId = self.UiMapID
 
+    if button == "RightButton" then
+        -- 3.3.5a: a right click on a world map icon zooms the map out, like a click on the map itself.
+        if (not self.miniMapIcon) and WorldMapFrame:IsShown() and WorldMapButton_OnClick then
+            WorldMapButton_OnClick(WorldMapButton, "RightButton")
+        end
+        return
+    end
+
     if uiMapId and WorldMapFrame:IsShown() and (not IsModifierKeyDown()) and (not self.miniMapIcon) then
-        if button == "LeftButton" and uiMapId ~= WorldMapFrame:GetMapID() then
+        if button == "LeftButton" and uiMapId ~= QuestieCompat335.GetWorldMapID() then
             QuestieCompat.OpenWorldMap(uiMapId)
         end
     else
@@ -318,9 +338,9 @@ function _QuestieFrame.UpdateTexture(self, texture)
 
     if self.data.StarterType then
         if self.data.StarterType == "itemFromMonster" or self.data.StarterType == "itemFromObject" then
-            self.overlayTexture:SetTexture("Interface/AddOns/Questie/Icons/loot_overlay.png")
+            self.overlayTexture:SetTexture("Interface/AddOns/Questie/Icons/loot_overlay.tga")
         elseif self.data.StarterType == "Object" then
-            self.overlayTexture:SetTexture("Interface/AddOns/Questie/Icons/object_overlay.png")
+            self.overlayTexture:SetTexture("Interface/AddOns/Questie/Icons/object_overlay.tga")
         end
         self.overlayTexture:Show()
     else
@@ -330,7 +350,7 @@ function _QuestieFrame.UpdateTexture(self, texture)
 
     --[[if self.data.FinisherType then
         if self.data.FinisherType == "Object" then
-            self.overlayTexture:SetTexture("Interface/AddOns/Questie/Icons/object_overlay.png")
+            self.overlayTexture:SetTexture("Interface/AddOns/Questie/Icons/object_overlay.tga")
         end
         self.overlayTexture:Show()
     else

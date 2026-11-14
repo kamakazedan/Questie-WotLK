@@ -60,10 +60,10 @@ local _townsfolk_texturemap = {
     ["Food"] = 133964,--select(10, GetItemInfo(4540)) -- bread
     ["Pet Food"] = 132165,--select(3, GetSpellInfo(6991)) -- feed pet
     ["Portal Trainer"] = "Interface\\Minimap\\vehicle-alliancemageportal",
-    ["Barber"] = QuestieLib.AddonPath.."Icons\\barbershop.png",
-    ["Arcane Reforger"] = QuestieLib.AddonPath.."Icons\\reforge.png",
+    ["Barber"] = QuestieLib.AddonPath.."Icons\\barbershop.tga",
+    ["Arcane Reforger"] = QuestieLib.AddonPath.."Icons\\reforge.tga",
     ["Transmogrifier"] = "Interface\\Minimap\\tracking\\transmogrifier",
-    ["Battle Pet Trainer"] = QuestieLib.AddonPath.."Icons\\petbattle.png",
+    ["Battle Pet Trainer"] = QuestieLib.AddonPath.."Icons\\petbattle.tga",
     ["Reagents"] = "Interface\\Minimap\\tracking\\reagents",
     ["Poisons"] = "Interface\\Minimap\\tracking\\poisons",
     [professionKeys.FIRST_AID] = "Interface\\Icons\\spell_holy_sealofsacrifice",
@@ -83,6 +83,17 @@ local _townsfolk_texturemap = {
     [professionKeys.INSCRIPTION] = "Interface\\Icons\\inv_inscription_tradeskill01",
     [professionKeys.RIDING] = "Interface\\Icons\\spell_nature_swiftness",
 }
+
+if QuestieCompat335.isLegacyClient then
+    -- 3.3.5a takes texture paths, not file IDs. Item and spell icons come from the client's own data.
+    local QUESTION_MARK = "Interface\\Icons\\INV_Misc_QuestionMark"
+    _townsfolk_texturemap["Bags"] = GetItemIcon(4496) or QUESTION_MARK -- small brown pouch
+    _townsfolk_texturemap["Potions"] = GetItemIcon(929) or QUESTION_MARK -- Healing Potion
+    _townsfolk_texturemap["Trade Goods"] = GetItemIcon(2321) or QUESTION_MARK -- thread
+    _townsfolk_texturemap["Drink"] = GetItemIcon(8766) or QUESTION_MARK -- morning glory dew
+    _townsfolk_texturemap["Food"] = GetItemIcon(4540) or QUESTION_MARK -- bread
+    _townsfolk_texturemap["Pet Food"] = select(3, GetSpellInfo(6991)) or QUESTION_MARK -- feed pet
+end
 
 local _townsfolk_order = {
     "Repair",
@@ -486,7 +497,7 @@ function QuestieMenu:Show(hideDelay)
         Questie.db.profile.showAvailableQuests = value
         QuestieQuest:ToggleNotes(value)
         QuestieQuest:SmoothReset()
-    end, icon=QuestieLib.AddonPath.."Icons\\available.blp", notCheckable=false, checked=Questie.db.profile.showAvailableQuests, isNotRadio=true, keepShownOnClick=true})
+    end, icon=QuestieLib.AddonPath.."Icons\\available.tga", notCheckable=false, checked=Questie.db.profile.showAvailableQuests, isNotRadio=true, keepShownOnClick=true})
     tinsert(menuTable, { text= l10n("Trivial Quest"), func = function()
         local value = Questie.db.profile.lowLevelStyle == Questie.LOWLEVEL_ALL
         if value then
@@ -496,7 +507,7 @@ function QuestieMenu:Show(hideDelay)
         end
         AvailableQuests.ResetLevelRequirementCache()
         AvailableQuests.CalculateAndDrawAll()
-    end, icon=QuestieLib.AddonPath.."Icons\\available_gray.blp", notCheckable=false, checked=Questie.db.profile.lowLevelStyle==Questie.LOWLEVEL_ALL, isNotRadio=true, keepShownOnClick=true})
+    end, icon=QuestieLib.AddonPath.."Icons\\available_gray.tga", notCheckable=false, checked=Questie.db.profile.lowLevelStyle==Questie.LOWLEVEL_ALL, isNotRadio=true, keepShownOnClick=true})
     tinsert(menuTable, { text= l10n("Objective"), func = function()
         local value = not Questie.db.profile.enableObjectives
         Questie.db.profile.enableObjectives = value

@@ -42,7 +42,13 @@ end
 
 local function safecall(func, ...)
 	if func then
-		return xpcall(func, errorhandler, ...)
+		-- 3.3.5a: xpcall does not forward extra arguments in Lua 5.1, so pack them into a closure
+		local argCount = select("#", ...)
+		if argCount == 0 then
+			return xpcall(func, errorhandler)
+		end
+		local args = {...}
+		return xpcall(function() return func(unpack(args, 1, argCount)) end, errorhandler)
 	end
 end
 
@@ -557,7 +563,7 @@ do
 		frame:SetFrameLevel(100) -- Lots of room to draw under it
 		frame:SetScript("OnKeyDown", function(self, key)
 			if key == "ESCAPE" then
-				if not InCombatLockdown() then
+				if not InCombatLockdown() and self.SetPropagateKeyboardInput then -- 3.3.5a: no keyboard propagation
 					self:SetPropagateKeyboardInput(false)
 				end
 				if self.cancel:IsShown() then
@@ -565,12 +571,12 @@ do
 				else -- Showing a validation error
 					self:Hide()
 				end
-			elseif not InCombatLockdown() then
+			elseif not InCombatLockdown() and self.SetPropagateKeyboardInput then
 				self:SetPropagateKeyboardInput(true)
 			end
 		end)
 
-		local border = CreateFrame("Frame", nil, frame, "DialogBorderOpaqueTemplate")
+		local border = CreateFrame("Frame", nil, frame, QuestieCompat335 and QuestieCompat335.DialogBorderOpaqueTemplate or "DialogBorderOpaqueTemplate")
 		border:SetAllPoints(frame)
 		frame:SetFixedFrameStrata(true)
 		frame:SetFixedFrameLevel(true)
@@ -585,11 +591,11 @@ do
 			button:SetSize(128, 21)
 			button:SetNormalFontObject(GameFontNormal)
 			button:SetHighlightFontObject(GameFontHighlight)
-			button:SetNormalTexture(130763) -- "Interface\\Buttons\\UI-DialogBox-Button-Up"
+			button:SetNormalTexture("Interface\\Buttons\\UI-DialogBox-Button-Up") -- 3.3.5a: path instead of FileDataID 130763
 			button:GetNormalTexture():SetTexCoord(0.0, 1.0, 0.0, 0.71875)
-			button:SetPushedTexture(130761) -- "Interface\\Buttons\\UI-DialogBox-Button-Down"
+			button:SetPushedTexture("Interface\\Buttons\\UI-DialogBox-Button-Down") -- 3.3.5a: path instead of FileDataID 130761
 			button:GetPushedTexture():SetTexCoord(0.0, 1.0, 0.0, 0.71875)
-			button:SetHighlightTexture(130762) -- "Interface\\Buttons\\UI-DialogBox-Button-Highlight"
+			button:SetHighlightTexture("Interface\\Buttons\\UI-DialogBox-Button-Highlight") -- 3.3.5a: path instead of FileDataID 130762
 			button:GetHighlightTexture():SetTexCoord(0.0, 1.0, 0.0, 0.71875)
 			button:SetText(newText)
 			return button
@@ -757,7 +763,7 @@ local function ActivateControl(widget, event, ...)
 		else
 			validationErrorPopup(validated)
 		end
-		PlaySound(882) -- SOUNDKIT.IG_PLAYER_INVITE_DECLINE || _DECLINE is actually missing from the table
+		PlaySound(QuestieCompat335 and QuestieCompat335.isLegacyClient and QuestieCompat335.Sounds[882] or 882) -- SOUNDKIT.IG_PLAYER_INVITE_DECLINE || _DECLINE is actually missing from the table
 		del(info)
 		return true
 	else
@@ -2010,6 +2016,13 @@ function AceConfigDialog:AddToBlizOptions(appName, name, parent, ...)
 		group:SetCallback("OnHide", ClearBlizPanel)
 
 		local categoryName = name or appName
+		if not (Settings and Settings.RegisterCanvasLayoutCategory) then
+			-- 3.3.5a: the Interface Options panel
+			group:SetName(categoryName, parent)
+			BlizOptionsIDMap[categoryName] = categoryName
+			InterfaceOptions_AddCategory(group.frame)
+			return group.frame, group.frame.name
+		end
 		if parent then
 			local parentID = BlizOptionsIDMap[parent] or parent
 			local category = Settings.GetCategory(parentID)

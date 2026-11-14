@@ -64,7 +64,8 @@ end
 function CommsEncoding.Init()
     CommsEncoding.hasCodecSupport = _HasCodecSupport()
 
-    if (not CommsEncoding.hasCodecSupport) then
+    if (not CommsEncoding.hasCodecSupport) and (not QuestieCompat335.isLegacyClient) then
+        -- 3.3.5a has no C_EncodingUtil; the comms that need it stay off there
         Questie.Error("Client does not have Codec support", l10n("Please report this on Github or Discord!"))
     end
 end

@@ -127,7 +127,7 @@ local methods = {
 	["SetImageByAtlas"] = function(self, atlasString)
 		self.imageshown = true
 		local image = self.image
-		image:SetAtlas(atlasString)
+		if image.SetAtlas then image:SetAtlas(atlasString) end -- 3.3.5a: no atlases
 		UpdateImageAnchor(self)
 	end,
 

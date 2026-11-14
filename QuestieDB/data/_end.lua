@@ -4,6 +4,7 @@
 -- owned it, so the consumer's own loader is untouched.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 if LibQuestieDB.read and LibQuestieDB.read.source then
   local source = LibQuestieDB.read.source
   source.RemoveLoaderShim()

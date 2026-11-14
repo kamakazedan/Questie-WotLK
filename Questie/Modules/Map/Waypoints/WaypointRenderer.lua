@@ -51,7 +51,7 @@ local renderers = setmetatable({}, {__mode = "k"})
 -- the outline out to transparent, so its outer edges stay smooth as lines move by fractions of a
 -- pixel. Each segment stretches it over a quad whose long edges run parallel to the segment, so the
 -- rows follow both edges and meet at mitered joins.
-local LINE_TEXTURE = QuestieLib.AddonPath .. "Icons\\waypoints\\waypoint-line-aa.png"
+local LINE_TEXTURE = QuestieLib.AddonPath .. "Icons\\waypoints\\waypoint-line-aa.tga"
 -- Quads are wider than the line by the fade, so the line keeps its thickness.
 local QUAD_SCALE = 16 / 12
 -- A fill's start corners take the line texture's left and right edges, and its end corners, both
@@ -59,7 +59,7 @@ local QUAD_SCALE = 16 / 12
 local FILL_TEX_COORDS = {0, 0, 0, 1, 1, 0.5, 1, 0.5}
 -- The line's rows turned into rings: this 32x32 image's disc has the line's profile from its center,
 -- at the line's texel density, and is transparent black around it.
-local CAP_TEXTURE = QuestieLib.AddonPath .. "Icons\\waypoints\\waypoint-cap-aa.png"
+local CAP_TEXTURE = QuestieLib.AddonPath .. "Icons\\waypoints\\waypoint-cap-aa.tga"
 -- The disc's radius, 8 texels, as a fraction of the image. It matches a quad's half width.
 local CAP_RADIUS = 8 / 32
 -- The line texture has about as many rows as a line has pixels, so bilinear filtering blends rows
@@ -70,6 +70,14 @@ local FILTER = "LINEAR"
 -- around them: under a fifth of a unit on the default 3-unit line, too little to see. Zoomed out,
 -- most curves are that small.
 WaypointRenderer.TRIMMING = 1 / 8
+
+-- 3.3.5a cannot move a texture's vertices (SetVertexOffset), so each segment is drawn as its
+-- bounding box, with texture coordinates turning the line image onto the segment. This version of
+-- the line image is 64 texels long with a transparent column at both ends, so that clamping the
+-- coordinates beyond the segment's ends draws nothing. Turns get no fills and caps there.
+local LEGACY = QuestieCompat335 and QuestieCompat335.isLegacyClient
+local LEGACY_LINE_TEXTURE = QuestieLib.AddonPath .. "Icons\\waypoints\\waypoint-line-335.tga"
+local LEGACY_LENGTH_FACTOR = 64 / 62
 
 -- Debug hover area
 local WHITE_TEXTURE = "Interface\\BUTTONS\\WHITE8X8"
@@ -124,8 +132,12 @@ local function _Acquire(self, view, kind, index)
         -- Pooled textures never leave this renderer, so they keep these settings and masks.
         texture:SetSnapToPixelGrid(false)
         texture:SetTexelSnappingBias(0)
-        texture:SetTexture(settings.asset, settings.wrap, settings.wrap, FILTER)
-        for _, mask in ipairs(self.maskTextures) do texture:AddMaskTexture(mask) end
+        if LEGACY then
+            texture:SetTexture(kind == "lines" and LEGACY_LINE_TEXTURE or settings.asset)
+        else
+            texture:SetTexture(settings.asset, settings.wrap, settings.wrap, FILTER)
+            for _, mask in ipairs(self.maskTextures) do texture:AddMaskTexture(mask) end
+        end
     end
     owned[index] = texture
     texture:Show()
@@ -211,10 +223,81 @@ local function _DrawKind(self, view, kind, quads, count, halfWidth)
     return count, acquired
 end
 
+---3.3.5a: draws the segment from (ax, ay) to (bx, by), canvas units with y down, as the bounding box
+---of the line's rectangle. Texture u runs along the segment, v across it.
+---@param texture Texture
+---@param view WaypointView
+---@param halfWidth number Half the width of the line image (fade included)
+local function _DrawSegmentLegacy(texture, view, ax, ay, bx, by, halfWidth)
+    local dx, dy = bx - ax, by - ay
+    local length = math.sqrt(dx * dx + dy * dy)
+    if length == 0 then
+        texture:Hide()
+        return
+    end
+    texture:Show()
+    local ux, uy = dx / length, dy / length -- along
+    local nx, ny = -uy, ux -- across
+    -- the image's transparent end columns lie beyond the segment's ends
+    local imageLength = length * LEGACY_LENGTH_FACTOR
+    local overhang = (imageLength - length) / 2
+    local startX, startY = ax - ux * overhang, ay - uy * overhang
+    local endX, endY = bx + ux * overhang, by + uy * overhang
+    local cornersX = {startX + nx * halfWidth, startX - nx * halfWidth, endX + nx * halfWidth, endX - nx * halfWidth}
+    local cornersY = {startY + ny * halfWidth, startY - ny * halfWidth, endY + ny * halfWidth, endY - ny * halfWidth}
+    local minX = math.min(cornersX[1], cornersX[2], cornersX[3], cornersX[4])
+    local maxX = math.max(cornersX[1], cornersX[2], cornersX[3], cornersX[4])
+    local minY = math.min(cornersY[1], cornersY[2], cornersY[3], cornersY[4])
+    local maxY = math.max(cornersY[1], cornersY[2], cornersY[3], cornersY[4])
+    local width = halfWidth * 2
+    -- texture coordinates of a point of the box
+    local function uv(x, y)
+        local px, py = x - startX, y - startY
+        return (px * ux + py * uy) / imageLength, (px * nx + py * ny) / width + 0.5
+    end
+    local ulx, uly = uv(minX, minY)
+    local llx, lly = uv(minX, maxY)
+    local urx, ury = uv(maxX, minY)
+    local lrx, lry = uv(maxX, maxY)
+    texture:ClearAllPoints()
+    texture:SetPoint("TOPLEFT", view, "TOPLEFT", minX, -minY)
+    texture:SetPoint("BOTTOMRIGHT", view, "TOPLEFT", maxX, -maxY)
+    texture:SetTexCoord(ulx, uly, llx, lly, urx, ury, lrx, lry)
+end
+
+---3.3.5a version of _DrawLines: straight segments between the points, no turn fills and caps.
+---@param self WaypointCanvasRenderer
+---@param view WaypointView
+---@return boolean acquired
+local function _DrawLinesLegacy(self, view)
+    local halfWidth = view.waypointThickness / 2
+    local quadHalfWidth = halfWidth * QUAD_SCALE
+    local smoothing = Questie.db.profile.waypointSmoothing * halfWidth
+    local acquired, lines = false, 0
+    for _, run in ipairs(view.waypointRuns) do
+        local smoothed = WaypointGeometry.Smooth(run, smoothing, quadHalfWidth)
+        local points = WaypointGeometry.Trim(smoothed, WaypointRenderer.TRIMMING * halfWidth)
+        for i = 2, #points do
+            lines = lines + 1
+            local texture, new = _Acquire(self, view, "lines", lines)
+            acquired = acquired or new
+            local a, b = points[i - 1], points[i]
+            _DrawSegmentLegacy(texture, view, a.x, a.y, b.x, b.y, quadHalfWidth)
+        end
+    end
+    _ReleaseBeyond(self, view, "lines", lines)
+    _ReleaseBeyond(self, view, "fills", 0)
+    _ReleaseBeyond(self, view, "caps", 0)
+    return acquired
+end
+
 ---@param self WaypointCanvasRenderer
 ---@param view WaypointView
 ---@return boolean acquired Some texture is new to the view and needs its color.
 local function _DrawLines(self, view)
+    if LEGACY then
+        return _DrawLinesLegacy(self, view)
+    end
     local halfWidth = view.waypointThickness / 2
     local quadHalfWidth = halfWidth * QUAD_SCALE
     -- Rounded corners pass a patrol's points at most waypointSmoothing half line widths away, and
@@ -256,7 +339,7 @@ end
 local function _DrawHoverArea(self, view)
     local radius = view.waypointRadius
     local bands, dots = 0, 0
-    if radius then
+    if radius and DrawLine then -- 3.3.5a: no DrawLine, so no debug hover area
         for _, run in ipairs(view.waypointRuns) do
             for i, point in ipairs(run) do
                 if i > 1 then

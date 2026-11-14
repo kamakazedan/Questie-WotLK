@@ -1,3 +1,7 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_QuestLog = QuestieCompat335.C_QuestLog
+local HaveQuestData = HaveQuestData or QuestieCompat335.HaveQuestData
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -90,7 +94,8 @@ ChatFilter.Filter = function(chatFrame, _, msg, playerName, languageName, channe
 
     -- Existing bracketed link handling
     if string.find(msg, "%[(..-) %((%d+)%)%]") then
-        if chatFrame and chatFrame.historyBuffer and #(chatFrame.historyBuffer.elements) > 0 and chatFrame ~= _G.ChatFrame2 then
+        -- 3.3.5a chat frames have no historyBuffer
+        if chatFrame and ((not chatFrame.historyBuffer) or #(chatFrame.historyBuffer.elements) > 0) and chatFrame ~= _G.ChatFrame2 then
             for k in string.gmatch(msg, "%[%[?%d?..?%]?..-%]") do
                 local sqid, questId, questLevel, questName
 

@@ -225,7 +225,7 @@ local function _CreateCheckbox(control, parent, item, width)
 
     local hoverTexture = checkbox:CreateTexture(nil, "ARTWORK", nil, 1)
     hoverTexture:SetAllPoints(checkbox, true)
-    hoverTexture:SetTexture("Interface\\Addons\\Questie\\Icons\\checkbox-minimal-highlight.png")
+    hoverTexture:SetTexture("Interface\\Addons\\Questie\\Icons\\checkbox-minimal-highlight.tga")
     hoverTexture:SetBlendMode("ADD")
     hoverTexture:SetAlpha(0.5)
     hoverTexture:Hide()

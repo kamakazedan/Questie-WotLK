@@ -34,9 +34,27 @@ function TrackerQuestFrame.Initialize(baseFrame, headerFrame)
     questFrame:SetScript("OnEnter", TrackerFadeTicker.Unfade)
     questFrame:SetScript("OnLeave", TrackerFadeTicker.Fade)
 
-    questFrame.ScrollFrame = CreateFrame("ScrollFrame", "TrackedQuestsScrollFrame", questFrame, "ScrollFrameTemplate")
-    questFrame.ScrollFrame:SetAllPoints(questFrame)
-    questFrame.ScrollFrame.ScrollBar:Hide()
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a has no ScrollFrameTemplate. The tracker shows no scroll bar, so a plain scroll frame
+        -- that scrolls with the mouse wheel does the same.
+        questFrame.ScrollFrame = CreateFrame("ScrollFrame", "TrackedQuestsScrollFrame", questFrame)
+        questFrame.ScrollFrame:SetAllPoints(questFrame)
+        questFrame.ScrollFrame:EnableMouseWheel(true)
+        questFrame.ScrollFrame:SetScript("OnMouseWheel", function(self, delta)
+            local range = self:GetVerticalScrollRange()
+            local offset = self:GetVerticalScroll() - delta * 20
+            if offset < 0 then
+                offset = 0
+            elseif offset > range then
+                offset = range
+            end
+            self:SetVerticalScroll(offset)
+        end)
+    else
+        questFrame.ScrollFrame = CreateFrame("ScrollFrame", "TrackedQuestsScrollFrame", questFrame, "ScrollFrameTemplate")
+        questFrame.ScrollFrame:SetAllPoints(questFrame)
+        questFrame.ScrollFrame.ScrollBar:Hide()
+    end
 
     questFrame.ScrollChildFrame = CreateFrame("Frame", "TrackedQuestsScrollChildFrame")
     questFrame.ScrollChildFrame:SetSize(questFrame.ScrollFrame:GetWidth(), (questFrame.ScrollFrame:GetHeight()))

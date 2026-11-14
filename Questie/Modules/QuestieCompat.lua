@@ -21,6 +21,11 @@ local tinsert = table.insert
 local _, _, _, interfaceVersion = GetBuildInfo()
 local isForever = interfaceVersion >= 16000 and interfaceVersion < 17000
 
+-- 3.3.5a: the original Wrath client. Its legacy API differs from Classic's in places; those
+-- functions below have a branch of their own (see Compat335/Compat335Api.lua).
+local Compat335 = QuestieCompat335
+local isLegacyClient = Compat335 and Compat335.isLegacyClient
+
 -- QuestieDB loads later; the loader returns the module table that its owning file will populate.
 ---@type QuestieDB
 local QuestieDB = QuestieLoader:ImportModule("QuestieDB")
@@ -93,6 +98,25 @@ end
 function QuestieCompat.GetAvailableQuests()
     if C_GossipInfo and C_GossipInfo.GetAvailableQuests then
         return C_GossipInfo.GetAvailableQuests()
+    elseif GetGossipAvailableQuests and isLegacyClient then
+        -- 3.3.5a: title, level, isTrivial, isDaily, isRepeatable per quest
+        local info = {GetGossipAvailableQuests()}
+        local availableQuests = {}
+        for i = 1, #info, 5 do
+            tinsert(availableQuests, {
+                title = info[i],
+                questLevel = info[i + 1],
+                isTrivial = info[i + 2],
+                frequency = info[i + 3] and 1 or 0,
+                repeatable = info[i + 4],
+                isLegendary = false,
+                isIgnored = false,
+                isImportant = false,
+                isMeta = false,
+                questID = 0,
+            })
+        end
+        return availableQuests
     elseif GetGossipAvailableQuests then
         -- Convert the flat list to records; unavailable quest IDs use 0.
         local info = {GetGossipAvailableQuests()}
@@ -125,6 +149,26 @@ function QuestieCompat.GetActiveQuests()
         -- Also mark quests complete when Questie's quest state reports completion.
         for _, quest in pairs(activeQuests) do
             quest.isComplete = quest.isComplete or QuestieDB.IsComplete(quest.questID) == 1
+        end
+        return activeQuests
+    elseif GetGossipActiveQuests and isLegacyClient then
+        -- 3.3.5a: title, level, isTrivial, isComplete per quest
+        local info = {GetGossipActiveQuests()}
+        local activeQuests = {}
+        for i = 1, #info, 4 do
+            tinsert(activeQuests, {
+                title = info[i],
+                questLevel = info[i + 1],
+                isTrivial = info[i + 2],
+                isComplete = info[i + 3],
+                isLegendary = false,
+                isIgnored = false,
+                frequency = nil,
+                repeatable = false,
+                isImportant = false,
+                isMeta = false,
+                questID = 0,
+            })
         end
         return activeQuests
     elseif GetGossipActiveQuests then
@@ -263,6 +307,18 @@ function QuestieCompat.GetContainerItemInfo(bagID, slot)
         else
             return nil
         end
+    elseif GetContainerItemInfo and isLegacyClient then
+        -- 3.3.5a returns texture, count, locked, quality, readable; add link (7) and item ID (10).
+        local texture, itemCount, locked, quality, readable = GetContainerItemInfo(bagID, slot)
+        if not texture then
+            return nil
+        end
+        local itemLink = GetContainerItemLink(bagID, slot)
+        local itemID = GetContainerItemID and GetContainerItemID(bagID, slot)
+        if (not itemID) and itemLink then
+            itemID = tonumber(itemLink:match("item:(%d+)"))
+        end
+        return texture, itemCount, locked, quality, readable, nil, itemLink, false, nil, itemID, nil
     elseif GetContainerItemInfo then
         return GetContainerItemInfo(bagID, slot)
     end
@@ -304,6 +360,14 @@ end
 ---@param uiMapId number
 ---@return boolean opened False when combat blocks opening the map.
 function QuestieCompat.OpenWorldMap(uiMapId)
+    if isLegacyClient then
+        -- 3.3.5a: show the map, then move it to the zone (showing it resets it to the player's zone).
+        if not WorldMapFrame:IsShown() then
+            ShowUIPanel(WorldMapFrame)
+        end
+        QuestieLoader:ImportModule("HBD"):SetMapToUiMapID(uiMapId)
+        return true
+    end
     if (not C_Map.OpenWorldMap) then
         if (not WorldMapFrame:IsShown()) then
             WorldMapFrame:Show()
@@ -344,6 +408,8 @@ function QuestieCompat.GetCurrentCalendarTime()
             hour = 0,
             minute = 0,
         }
+    elseif isLegacyClient then
+        return Compat335.GetCurrentCalendarTime()
     end
     error(errorMsg, 2)
 end
@@ -355,10 +421,13 @@ end
 function QuestieCompat.IsSpellKnown(spellID)
     if C_SpellBook and C_SpellBook.IsSpellKnown then
         return C_SpellBook.IsSpellKnown(spellID)
-    else
+    elseif IsPlayerSpell then
         -- IsPlayerSpell matches the modern knowledge check.
         -- Legacy IsSpellKnown checks spellbook membership instead.
         return IsPlayerSpell(spellID)
+    else
+        -- 3.3.5a: only the spellbook check exists.
+        return IsSpellKnown(spellID) and true or false
     end
 end
 
@@ -490,6 +559,9 @@ function QuestieCompat.GetQuestLogTitle(questLogIndex)
             isComplete, info.frequency, info.questID, info.startEvent,
             GetCVarBool("displayQuestID"), info.isOnMap, info.hasLocalPOI, info.isTask,
             info.isBounty, info.isStory, info.isHidden, info.isScaling
+    elseif isLegacyClient then
+        -- 3.3.5a has a different return order (suggestedGroup 4th, questID 9th).
+        return Compat335.GetQuestLogTitle(questLogIndex)
     elseif GetQuestLogTitle then
         return GetQuestLogTitle(questLogIndex)
     end
@@ -553,6 +625,14 @@ function QuestieCompat.UnitAura(unit, index, filter)
         return aura.name, aura.icon, aura.applications, aura.dispelName,
             aura.duration, aura.expirationTime, aura.sourceUnit,
             aura.isStealable, aura.nameplateShowPersonal, aura.spellId
+    elseif UnitAura and isLegacyClient then
+        -- 3.3.5a: name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable,
+        -- shouldConsolidate, spellId. Drop the rank so spellId is 10th, as on Classic.
+        local name, _, icon, count, debuffType, duration, expirationTime, caster, isStealable, shouldConsolidate, spellId = UnitAura(unit, index, filter)
+        if not name then
+            return nil
+        end
+        return name, icon, count, debuffType, duration, expirationTime, caster, isStealable, shouldConsolidate, spellId
     elseif UnitAura then
         return UnitAura(unit, index, filter)
     end
@@ -607,6 +687,8 @@ function QuestieCompat.IsQuestFlaggedCompleted(questID)
         return C_QuestLog.IsQuestFlaggedCompleted(questID)
     elseif IsQuestFlaggedCompleted then
         return IsQuestFlaggedCompleted(questID)
+    elseif isLegacyClient then
+        return Compat335.IsQuestFlaggedCompleted(questID)
     end
     error(errorMsg, 2)
 end
@@ -786,6 +868,9 @@ function QuestieCompat.GetFactionInfo(index)
             d.canToggleAtWar, d.isHeader, d.isCollapsed, d.isHeaderWithRep,
             d.isWatched, d.isChild, d.factionID, d.hasBonusRepGain,
             d.canSetInactive
+    elseif isLegacyClient then
+        -- 3.3.5a returns no faction ID; it is added as 14th return.
+        return Compat335.GetFactionInfo(index)
     elseif GetFactionInfo then
         return GetFactionInfo(index)
     end
@@ -820,6 +905,8 @@ function QuestieCompat.GetFactionInfoByID(factionID)
             d.canToggleAtWar, d.isHeader, d.isCollapsed, d.isHeaderWithRep,
             d.isWatched, d.isChild, d.factionID, d.hasBonusRepGain,
             d.canSetInactive
+    elseif isLegacyClient then
+        return Compat335.GetFactionInfoByID(factionID)
     elseif GetFactionInfoByID then
         return GetFactionInfoByID(factionID)
     end
@@ -834,6 +921,8 @@ function QuestieCompat.GetQuestLogIndexByID(questID)
     if C_QuestLog and C_QuestLog.GetLogIndexForQuestID then
         -- Convert the modern API's nil result to the legacy zero result.
         return C_QuestLog.GetLogIndexForQuestID(questID) or 0
+    elseif isLegacyClient then
+        return Compat335.GetQuestLogIndexByID(questID)
     elseif GetQuestLogIndexByID then
         return GetQuestLogIndexByID(questID)
     end
@@ -848,6 +937,13 @@ function QuestieCompat.GetQuestLink(arg)
     if C_QuestLog and C_QuestLog.GetQuestLink then
         -- This spelling is a capability probe; its availability is not established by the inspected sources.
         return C_QuestLog.GetQuestLink(arg)
+    elseif isLegacyClient then
+        -- 3.3.5a: GetQuestLink takes a quest log index, so only quests in the log have a link.
+        local questLogIndex = Compat335.GetQuestLogIndexByID(arg)
+        if questLogIndex > 0 then
+            return GetQuestLink(questLogIndex)
+        end
+        return nil
     elseif GetQuestLink then
         return GetQuestLink(arg)
     end
@@ -979,6 +1075,9 @@ function QuestieCompat.GetQuestsCompleted(target)
             completed[questID] = true
         end
         return completed
+    elseif isLegacyClient then
+        -- 3.3.5a: the list the server sent at login (QueryQuestsCompleted) plus the turn-ins since.
+        return Compat335.GetQuestsCompleted(target)
     elseif GetQuestsCompleted then
         return GetQuestsCompleted(target)
     end
@@ -997,6 +1096,8 @@ function QuestieCompat.GetQuestTagInfo(questID)
             info.tradeskillLineID, info.displayExpiration
     elseif GetQuestTagInfo then
         return GetQuestTagInfo(questID)
+    elseif isLegacyClient then
+        return nil
     end
     error(errorMsg, 2)
 end
@@ -1188,6 +1289,8 @@ function QuestieCompat.GetQuestIDFromLogIndex(questLogIndex)
         return info and not info.isHeader and info.questID or nil
     elseif GetQuestIDFromLogIndex then
         return GetQuestIDFromLogIndex(questLogIndex)
+    elseif isLegacyClient then
+        return Compat335.GetQuestIdAtLogIndex(questLogIndex)
     end
     error(errorMsg, 2)
 end

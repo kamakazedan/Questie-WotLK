@@ -17,6 +17,7 @@
 -- deferred strings without materializing tables until a consumer reads them.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local config = LibQuestieDB.config
 local normalize = LibQuestieDB.Meta.normalize

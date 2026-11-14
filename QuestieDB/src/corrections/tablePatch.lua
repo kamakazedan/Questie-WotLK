@@ -1,6 +1,7 @@
 -- Table Correction operations. Schema shapes determine the unit of equality and mutation;
 -- nested tuples are complete values, not instructions to merge arbitrary Lua tables.
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 local patch = {}
 local OFFSET = 1000
 

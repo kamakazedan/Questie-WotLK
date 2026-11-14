@@ -1,4 +1,4 @@
-## Interface: 38002
+## Interface: 30300
 ## Title: Questie|cFF00FF00 v12.9.0|r
 ## Author: Aero/Logon/Muehe/TheCrux(BreakBB)/Drejjmit/Dyaxler/Cheeq/TechnoHunter/Yttrium/Everyone else
 ## Notes: A standalone Classic QuestHelper
@@ -24,13 +24,19 @@
 ## Category-zhTW: 任務
 ## Version: 12.9.0
 ## X-QuestieDB-Contract: 4
-## OptionalDeps: QuestieDB, QuestieTrace, Ace3, CallbackHandler-1.0, HereBeDragons, Krowi_WorldMapButtons, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0, LibStub, LibUIDropDownMenu
+## OptionalDeps: QuestieDB, QuestieTrace, Ace3, CallbackHandler-1.0, HereBeDragons, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0, LibStub, LibUIDropDownMenu
 ## LoadSavedVariablesFirst: 1
 ## SavedVariables: QuestieConfig, QuestieProfilerEnabled
 ## SavedVariablesPerCharacter: QuestieConfigCharacter
-## IconTexture: Interface\AddOns\Questie\Icons\questie.png
+## IconTexture: Interface\AddOns\Questie\Icons\questie.tga
 ## X-Curse-Project-ID: 334372
 ## X-Wago-ID: qv634BKb
+
+# 3.3.5a compatibility layer: must load before everything else.
+Compat335\Compat335.lua
+Compat335\Compat335.xml
+Compat335\ZoneData335.lua
+Compat335\Compat335Api.lua
 
 # Loader module. First so that every file after it can be timed: the load-time hook lives here,
 # and anything loaded before it is invisible to measurement. It has no dependencies of its own.
@@ -133,6 +139,8 @@ Modules\EventHandler\EventHandler.lua
 Modules\EventHandler\AchievementEventHandler.lua
 Modules\EventHandler\GroupEventHandler.lua
 Modules\EventHandler\QuestEventHandler.lua
+# 3.3.5a: quest events the client does not fire
+Compat335\QuestEvents335.lua
 Modules\Migration.lua
 Modules\Phasing.lua
 Modules\QuestieMenu\Townsfolk.lua
@@ -165,7 +173,6 @@ Modules\QuestiePlayer.lua
 Modules\QuestieDebugOffer.lua
 Modules\WatchFrameHook.lua
 Modules\WorldMapButton\WorldMapButton.lua
-Modules\WorldMapButton\QuestieWorldMapButtonTemplate.xml
 Modules\DebugFunctions.lua
 
 # QuestLinks

@@ -481,6 +481,8 @@ local setupFailed = false
 ---minimap is optional: a failed setup is reported once and world map drawing continues.
 function WaypointMinimap.Invalidate()
     if not layer then
+        -- 3.3.5a has no mask textures to keep paths inside the round minimap: world map only.
+        if QuestieCompat335.isLegacyClient then return end
         if setupFailed or not Minimap then return end
         local created, result = pcall(WaypointMinimap.New, Minimap)
         if not created then

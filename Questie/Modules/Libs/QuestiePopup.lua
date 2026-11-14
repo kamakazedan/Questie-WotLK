@@ -1,4 +1,5 @@
 local _, addon = ...
+addon = addon or QuestieCompat335 -- 3.3.5a: shared table if the client passes no namespace
 local Dialog = addon.Dialog
 
 -- Expose this addon's private dialog implementation through QuestieLoader.

@@ -1,5 +1,7 @@
 <Bindings>
-    <Binding name="QUESTIE_TOGGLE_JOURNEY" category="Questie">
+    <!-- 3.3.5a groups key bindings under the header of the first binding (BINDING_HEADER_QUESTIE, Compat335.lua);
+         later clients use the category attribute. -->
+    <Binding name="QUESTIE_TOGGLE_JOURNEY" header="QUESTIE" category="Questie">
         QuestieLoader:ImportModule("QuestieJourney"):ToggleJourneyWindow()
     </Binding>
     <Binding name="QUESTIE_TOGGLE_TRACKER" category="Questie">

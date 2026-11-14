@@ -5,4 +5,5 @@
 -- exclusions. Closed by src/corrections/_end.lua.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 LibQuestieDB.CorrectionCompat.Install(LibQuestieDB.flavor)

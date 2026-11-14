@@ -22,7 +22,7 @@ local methods = {
 	end,
 
 	["OnRelease"] = function(self)
-		self.label:ClearText()
+		self.label:SetText("") -- 3.3.5a: no ClearText
 		self.label:ClearAllPoints()
 		self.label:SetPoint("TOP")
 		self.label:SetPoint("BOTTOM")
@@ -30,7 +30,7 @@ local methods = {
 
 	["SetText"] = function(self, text)
 		self.label:SetText(text or "")
-		if issecretvalue(text) or (text and text ~= "") then
+		if (issecretvalue and issecretvalue(text)) or (text and text ~= "") then
 			self.left:SetPoint("RIGHT", self.label, "LEFT", -5, 0)
 			self.right:Show()
 		else
@@ -56,14 +56,14 @@ local function Constructor()
 	left:SetHeight(8)
 	left:SetPoint("LEFT", 3, 0)
 	left:SetPoint("RIGHT", label, "LEFT", -5, 0)
-	left:SetTexture(137057) -- Interface\\Tooltips\\UI-Tooltip-Border
+	left:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border") -- 3.3.5a: path instead of FileDataID 137057
 	left:SetTexCoord(0.81, 0.94, 0.5, 1)
 
 	local right = frame:CreateTexture(nil, "BACKGROUND")
 	right:SetHeight(8)
 	right:SetPoint("RIGHT", -3, 0)
 	right:SetPoint("LEFT", label, "RIGHT", 5, 0)
-	right:SetTexture(137057) -- Interface\\Tooltips\\UI-Tooltip-Border
+	right:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border") -- 3.3.5a: path instead of FileDataID 137057
 	right:SetTexCoord(0.81, 0.94, 0.5, 1)
 
 	local widget = {

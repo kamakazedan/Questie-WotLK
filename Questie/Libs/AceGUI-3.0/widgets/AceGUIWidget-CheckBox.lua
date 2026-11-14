@@ -56,9 +56,9 @@ local function CheckBox_OnMouseUp(frame)
 		self:ToggleChecked()
 
 		if self.checked then
-			PlaySound(856) -- SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON
+			PlaySound(QuestieCompat335 and QuestieCompat335.isLegacyClient and QuestieCompat335.Sounds[856] or 856) -- SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON
 		else -- for both nil and false (tristate)
-			PlaySound(857) -- SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF
+			PlaySound(QuestieCompat335 and QuestieCompat335.isLegacyClient and QuestieCompat335.Sounds[857] or 857) -- SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF
 		end
 
 		self:Fire("OnValueChanged", self.checked)
@@ -151,21 +151,21 @@ local methods = {
 		local size
 		if type == "radio" then
 			size = 16
-			checkbg:SetTexture(130843) -- Interface\\Buttons\\UI-RadioButton
+			checkbg:SetTexture("Interface\\Buttons\\UI-RadioButton") -- 3.3.5a: path instead of FileDataID 130843
 			checkbg:SetTexCoord(0, 0.25, 0, 1)
-			check:SetTexture(130843) -- Interface\\Buttons\\UI-RadioButton
+			check:SetTexture("Interface\\Buttons\\UI-RadioButton") -- 3.3.5a: path instead of FileDataID 130843
 			check:SetTexCoord(0.25, 0.5, 0, 1)
 			check:SetBlendMode("ADD")
-			highlight:SetTexture(130843) -- Interface\\Buttons\\UI-RadioButton
+			highlight:SetTexture("Interface\\Buttons\\UI-RadioButton") -- 3.3.5a: path instead of FileDataID 130843
 			highlight:SetTexCoord(0.5, 0.75, 0, 1)
 		else
 			size = 24
-			checkbg:SetTexture(130755) -- Interface\\Buttons\\UI-CheckBox-Up
+			checkbg:SetTexture("Interface\\Buttons\\UI-CheckBox-Up") -- 3.3.5a: path instead of FileDataID 130755
 			checkbg:SetTexCoord(0, 1, 0, 1)
-			check:SetTexture(130751) -- Interface\\Buttons\\UI-CheckBox-Check
+			check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check") -- 3.3.5a: path instead of FileDataID 130751
 			check:SetTexCoord(0, 1, 0, 1)
 			check:SetBlendMode("BLEND")
-			highlight:SetTexture(130753) -- Interface\\Buttons\\UI-CheckBox-Highlight
+			highlight:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight") -- 3.3.5a: path instead of FileDataID 130753
 			highlight:SetTexCoord(0, 1, 0, 1)
 		end
 		checkbg:SetHeight(size)
@@ -251,11 +251,11 @@ local function Constructor()
 	checkbg:SetWidth(24)
 	checkbg:SetHeight(24)
 	checkbg:SetPoint("TOPLEFT")
-	checkbg:SetTexture(130755) -- Interface\\Buttons\\UI-CheckBox-Up
+	checkbg:SetTexture("Interface\\Buttons\\UI-CheckBox-Up") -- 3.3.5a: path instead of FileDataID 130755
 
 	local check = frame:CreateTexture(nil, "OVERLAY")
 	check:SetAllPoints(checkbg)
-	check:SetTexture(130751) -- Interface\\Buttons\\UI-CheckBox-Check
+	check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check") -- 3.3.5a: path instead of FileDataID 130751
 
 	local text = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	text:SetJustifyH("LEFT")
@@ -264,7 +264,7 @@ local function Constructor()
 	text:SetPoint("RIGHT")
 
 	local highlight = frame:CreateTexture(nil, "HIGHLIGHT")
-	highlight:SetTexture(130753) -- Interface\\Buttons\\UI-CheckBox-Highlight
+	highlight:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight") -- 3.3.5a: path instead of FileDataID 130753
 	highlight:SetBlendMode("ADD")
 	highlight:SetAllPoints(checkbg)
 

@@ -5,6 +5,7 @@
 -- and `Questie` stand-in exist only until _end.lua hands the previous globals back.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local capture = {
   locale = GetLocale(),

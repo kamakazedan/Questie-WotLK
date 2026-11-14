@@ -154,10 +154,10 @@ function TrackerLayout.UpdateLineWidth(line, marginLeft)
         -- We use the fontSize as reliable way to determine the line height. GetStringHeight can be inconsistent.
         -- We add an extra pixel per line to account for WoW's internal line spacing on top of the raw font size.
         local _, fontSize = line.label:GetFont()
-        local lineHeight = ((fontSize + 1) * line.label:GetNumLines()) + 1 -- add an extra pixel to make sure it really wraps
+        local lineHeight = ((fontSize + 1) * QuestieCompat335.GetNumLines(line.label)) + 1 -- add an extra pixel to make sure it really wraps
         line.label:SetHeight(lineHeight)
         line:SetHeight(line.label:GetHeight() + (Questie.db.profile.trackerQuestPadding + 2))
 
-        TrackerLayout.TrackLineWidth(line.label:GetWrappedWidth() + marginLeft)
+        TrackerLayout.TrackLineWidth(QuestieCompat335.GetWrappedWidth(line.label) + marginLeft)
     end
 end

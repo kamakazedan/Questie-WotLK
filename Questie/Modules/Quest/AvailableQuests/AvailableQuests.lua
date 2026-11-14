@@ -1,3 +1,6 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local GetQuestID = GetQuestID or QuestieCompat335.GetQuestID
+
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 
@@ -360,12 +363,12 @@ local function _GetDialogNPC(unit)
         return
     end
 
-    local kind, _, _, _, _, npcIDStr = strsplit("-", npcGuid)
+    local kind, npcID = QuestieCompat335.GetGuidInfo(npcGuid) -- 3.3.5a: hex GUIDs
     if kind ~= "Creature" and kind ~= "Vehicle" then
         -- A readable object GUID can still disambiguate legacy greeting titles.
         return npcGuid
     end
-    return npcGuid, tonumber(npcIDStr)
+    return npcGuid, npcID
 end
 
 ---@param questId QuestId

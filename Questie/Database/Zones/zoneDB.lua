@@ -1,3 +1,7 @@
+-- 3.3.5a: Questie's own versions of these newer APIs (Compat335/Compat335Api.lua)
+local C_Map = QuestieCompat335.C_Map
+local Enum = QuestieCompat335.Enum
+
 ---@class ZoneDB
 local ZoneDB = QuestieLoader:CreateModule("ZoneDB")
 

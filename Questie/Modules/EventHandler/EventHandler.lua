@@ -159,6 +159,15 @@ function EventHandler:RegisterLateEvents()
         end
     end)
     Questie:RegisterEvent("QUEST_ACCEPTED", function(_, questLogIndex, questId)
+        if (not questId) and QuestieCompat335.isLegacyClient then
+            -- 3.3.5a sends only the quest log index
+            questId = QuestieCompat335.GetAcceptedQuestID(questLogIndex)
+            if not questId then
+                -- Not identifiable now (collapsed header); the quest log scan adopts it later.
+                QuestEventHandler.UnitQuestLogChanged("player")
+                return
+            end
+        end
         if Questie.IsForever then
             -- Forever sends only the quest ID; Classic sends the log index followed by the ID.
             questId = questLogIndex
@@ -215,6 +224,14 @@ function EventHandler:RegisterLateEvents()
     end)
     Questie:RegisterEvent("CRITERIA_UPDATE", QuestEventHandler.CriteriaUpdate)
     Questie:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE", function(_, eventType) QuestEventHandler.PlayerInteractionManagerFrameHide(eventType) end)
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a fires one event per frame instead of PLAYER_INTERACTION_MANAGER_FRAME_HIDE
+        local interactionTypes = {TRADE_CLOSED = 1, MERCHANT_CLOSED = 5, BANKFRAME_CLOSED = 8, GUILDBANKFRAME_CLOSED = 10,
+                                  MAIL_CLOSED = 17, AUCTION_HOUSE_CLOSED = 21}
+        for eventName, eventType in pairs(interactionTypes) do
+            Questie:RegisterEvent(eventName, function() QuestEventHandler.PlayerInteractionManagerFrameHide(eventType) end)
+        end
+    end
 
     -- The client's quest data is stale from PLAYER_LEAVING_WORLD on, and whether LOADING_SCREEN_ENABLED comes before
     -- or after it is not known: either one protects the cache.
@@ -359,9 +376,27 @@ function EventHandler:RegisterLateEvents()
     -- Questie Comms Events
 
     -- Party join event for QuestieComms, Use bucket to hinder this from spamming (Ex someone using a raid invite addon etc)
-    Questie:RegisterBucketEvent("GROUP_ROSTER_UPDATE", 1, GroupEventHandler.GroupRosterUpdate)
-    Questie:RegisterEvent("GROUP_JOINED", GroupEventHandler.GroupJoined)
-    Questie:RegisterEvent("GROUP_LEFT", GroupEventHandler.GroupLeft)
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a has no GROUP_ROSTER_UPDATE, GROUP_JOINED or GROUP_LEFT
+        Questie:RegisterBucketEvent({"PARTY_MEMBERS_CHANGED", "RAID_ROSTER_UPDATE"}, 1, GroupEventHandler.GroupRosterUpdate)
+        local wasInGroup = IsInGroup()
+        local groupFrame = CreateFrame("Frame")
+        groupFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+        groupFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+        groupFrame:SetScript("OnEvent", function()
+            local inGroup = IsInGroup()
+            if inGroup and (not wasInGroup) then
+                GroupEventHandler.GroupJoined()
+            elseif wasInGroup and (not inGroup) then
+                GroupEventHandler.GroupLeft()
+            end
+            wasInGroup = inGroup
+        end)
+    else
+        Questie:RegisterBucketEvent("GROUP_ROSTER_UPDATE", 1, GroupEventHandler.GroupRosterUpdate)
+        Questie:RegisterEvent("GROUP_JOINED", GroupEventHandler.GroupJoined)
+        Questie:RegisterEvent("GROUP_LEFT", GroupEventHandler.GroupLeft)
+    end
 
     -- On a /reload (or login) while already in a group, GROUP_JOINED does not fire, so request party quest logs now;
     -- otherwise we never receive party members' objectives until the group changes.
@@ -370,8 +405,13 @@ function EventHandler:RegisterLateEvents()
     end
 
     -- Nameplate / Target Frame Objective Events
-    Questie:RegisterEvent("NAME_PLATE_UNIT_ADDED", QuestieNameplate.NameplateCreated)
-    Questie:RegisterEvent("NAME_PLATE_UNIT_REMOVED", QuestieNameplate.NameplateDestroyed)
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: no nameplate units or events, nameplates are found by scanning
+        QuestieNameplate.StartLegacyScanner()
+    else
+        Questie:RegisterEvent("NAME_PLATE_UNIT_ADDED", QuestieNameplate.NameplateCreated)
+        Questie:RegisterEvent("NAME_PLATE_UNIT_REMOVED", QuestieNameplate.NameplateDestroyed)
+    end
     Questie:RegisterEvent("PLAYER_TARGET_CHANGED", function(...)
         QuestieNameplate:DrawTargetFrame()
         --if Questie.IsSoD then QuestieDebugOffer.NPCTarget() end;
@@ -382,6 +422,11 @@ function EventHandler:RegisterLateEvents()
         QuestieTracker.QuestItemLooted(_, text)
         QuestieAnnounce.ItemLooted(_, text, notPlayerName, _, _, playerName)
     end)
+
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: QUEST_TURNED_IN and QUEST_REMOVED are worked out from the quest log (Compat335/QuestEvents335.lua)
+        QuestieCompat335.StartQuestEvents()
+    end
 end
 
 function _EventHandler:PlayerLogin()
@@ -481,7 +526,33 @@ local _QuestProgressMessages = {
 --- Fires when a UI Info Message (yellow text) appears near the top of the screen
 ---@param errorType number The error type value from the UI_INFO_MESSAGE event
 ---@param message string The message value from the UI_INFO_MESSAGE event
+local _questProgressPatterns
+
 function _EventHandler:UiInfoMessage(errorType, message)
+    if not GetGameMessageInfo then
+        -- 3.3.5a: UI_INFO_MESSAGE(message), so recognise the message by its text
+        message = errorType
+        if type(message) ~= "string" then
+            return
+        end
+        if not _questProgressPatterns then
+            _questProgressPatterns = {}
+            for globalName in pairs(_QuestProgressMessages) do
+                local text = _G[globalName]
+                if type(text) == "string" then
+                    local pattern = "^" .. text:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0"):gsub("%%s", ".+"):gsub("%%d", "%%d+") .. "$"
+                    _questProgressPatterns[#_questProgressPatterns + 1] = pattern
+                end
+            end
+        end
+        for _, pattern in ipairs(_questProgressPatterns) do
+            if message:find(pattern) then
+                MinimapIcon:UpdateText(message)
+                return
+            end
+        end
+        return
+    end
     if _QuestProgressMessages[GetGameMessageInfo(errorType)] then
         MinimapIcon:UpdateText(message)
     end

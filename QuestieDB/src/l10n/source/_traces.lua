@@ -4,6 +4,7 @@
 -- module fields, so the base payloads are set aside before the traces assign theirs.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local capture = LibQuestieDB.__l10nSourceCapture
 local module = capture.module

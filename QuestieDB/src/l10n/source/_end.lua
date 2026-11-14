@@ -5,6 +5,7 @@
 -- Forever trace lookups merged per field, then whole-row lookup overrides.
 
 local _, LibQuestieDB = ...
+LibQuestieDB = LibQuestieDB or QuestieDB_Namespace335 -- 3.3.5a
 
 local capture = LibQuestieDB.__l10nSourceCapture
 LibQuestieDB.__l10nSourceCapture = nil

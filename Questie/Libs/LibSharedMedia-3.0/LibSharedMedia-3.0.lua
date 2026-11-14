@@ -237,7 +237,8 @@ local function updateMediaList(mediatype, value)
 end
 
 do
-    local IsKnownFile = C_UIFileAsset.IsKnownFile
+    -- 3.3.5a: there is no C_UIFileAsset, so every path is accepted
+    local IsKnownFile = (C_UIFileAsset and C_UIFileAsset.IsKnownFile) or function() return true end
     function lib:Register(mediatype, key, data, langmask)
         if type(mediatype) ~= "string" then
             error(MAJOR..":Register(mediatype, key, data, langmask) - mediatype must be string, got "..type(mediatype))
@@ -260,7 +261,7 @@ do
                 -- files accessed via path only allowed from interface folder
                 return false
             end
-            if mediatype == lib.MediaType.SOUND and not (path:find(".ogg", nil, true) or path:find(".mp3", nil, true)) then
+            if mediatype == lib.MediaType.SOUND and not (path:find(".ogg", nil, true) or path:find(".mp3", nil, true) or path:find(".wav", nil, true)) then -- 3.3.5a ships .wav sounds
                 -- only ogg and mp3 are valid sounds
                 return false
             end
