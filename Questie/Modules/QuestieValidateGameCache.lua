@@ -152,6 +152,12 @@ local function OnQuestLogUpdate()
 end
 
 local function OnPlayerEnteringWorld(_, _, isInitialLogin, isReloadingUi)
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a: PLAYER_ENTERING_WORLD has no arguments. This frame only sees the first one after the UI
+        -- loaded, which is the login or the /reload, and no update is skipped: the quest log checks in
+        -- OnQuestLogUpdate decide when the data is complete (and QuestieInit stops waiting after 3 seconds).
+        isInitialLogin, isReloadingUi = false, true
+    end
     assert(isInitialLogin or isReloadingUi) -- We should get to here only at login or at /reload.
 
     -- Game's quest log has still old cached data on the first QUEST_LOG_UPDATE after PLAYER_ENTERING_WORLD during login.

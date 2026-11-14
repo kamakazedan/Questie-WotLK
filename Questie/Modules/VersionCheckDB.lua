@@ -19,7 +19,8 @@ end
 ---@return boolean supported
 ---@return string? message
 function VersionCheckDB.Check()
-    local qDBInstalled = C_AddOns and C_AddOns.IsAddOnLoaded("QuestieDB")
+    local isAddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded -- 3.3.5a: no C_AddOns
+    local qDBInstalled = isAddOnLoaded and isAddOnLoaded("QuestieDB")
     local required, message = VersionCheckDB.GetRequiredContract()
     if not required then
         return false, message
