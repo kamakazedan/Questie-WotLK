@@ -199,6 +199,9 @@ end
 
 function QuestieLoader:PopulateGlobals() -- called when debugging is enabled
     for name, module in pairs(modules) do
-        _G[name] = module
+        -- 3.3.5a: never replace the client's own globals (Blizzard's world map frame is called WorldMapButton)
+        if _G[name] == nil or _G[name] == module then
+            _G[name] = module
+        end
     end
 end
