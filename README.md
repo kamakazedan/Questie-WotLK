@@ -40,9 +40,8 @@ Working on 3.3.5a:
 The 3.3.5a client lacks many of the functions newer clients give addons. Questie works around most of
 them, but some things work differently:
 
-- **Keep the quest log's zone headers expanded.** The 3.3.5a client does not show addons the quests
-  under a collapsed header, so Questie cannot update or track those quests until the header is
-  expanded again.
+- **Collapsed quest log headers:** if a quest under a collapsed zone header in the quest log stops
+  updating, expand that header.
 - **Nameplate icons are matched by name.** Nameplates on this client do not say which NPC they belong
   to, only its name, so another NPC with the same name as a quest target gets the icon too. The icon on
   the target frame is exact.
@@ -59,9 +58,12 @@ them, but some things work differently:
 
 ## Testing status
 
-This port has been checked with static analysis only: every Lua file passes a Lua 5.1 syntax check,
-and the code was scanned for calls to functions the 3.3.5a client does not have. It has not been run
-in the game yet. If you see Lua errors, turn on error display with `/console scriptErrors 1` (or use
+Every Lua file passes a Lua 5.1 syntax check, and the code was scanned for calls to functions the
+3.3.5a client does not have. Questie was also run in a simulated 3.3.5a client (a mock of the game's
+API and widgets) through login, a relog with saved settings, the world map, tooltips, nameplates,
+quest progress, accepting, turning in and abandoning quests, auto-accept, party sharing, the tracker,
+the options window and the Journey. Testing in the real game has started, and the errors found so
+far are fixed. If you see Lua errors, turn on error display with `/console scriptErrors 1` (or use
 BugGrabber/BugSack) and report the full error text.
 
 ## For maintainers
