@@ -548,10 +548,12 @@ function QuestieTracker:QuestItemLooted(text)
 
             if GetItemCount(itemId) == 0 then
                 -- If the item is not fully in the bag yet, we need to wait for it to be added
-                Questie:RegisterEvent("BAG_UPDATE_DELAYED", function()
+                -- 3.3.5a: no BAG_UPDATE_DELAYED, BAG_UPDATE fires once per changed bag instead
+                local bagEvent = QuestieCompat335.isLegacyClient and "BAG_UPDATE" or "BAG_UPDATE_DELAYED"
+                Questie:RegisterEvent(bagEvent, function()
                     if GetItemCount(itemId) > 0 then
                         -- API recognizes the item is in the bag now
-                        Questie:UnregisterEvent("BAG_UPDATE_DELAYED")
+                        Questie:UnregisterEvent(bagEvent)
                         QuestieCombatQueue:Queue(function()
                             QuestieTracker:Update()
                         end)

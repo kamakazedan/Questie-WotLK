@@ -364,7 +364,7 @@ function HereBeDragons:GetZoneCoordinatesFromWorld(x, y, zone, allowOutOfBounds)
     if not data or data[1] == 0 or data[2] == 0 then return nil, nil end
     if not x or not y then return nil, nil end
 
-    return self:GetZoneCoordinatesFromWorldInstance(x, y, data.instance, zone, allowOutOfBounds)
+    return HereBeDragons:GetZoneCoordinatesFromWorldInstance(x, y, data.instance, zone, allowOutOfBounds)
 end
 
 --- Convert world coordinates to local/point zone coordinates
@@ -402,10 +402,10 @@ end
 function HereBeDragons:TranslateZoneCoordinates(x, y, oZone, dZone, allowOutOfBounds)
     if oZone == dZone then return x, y end
 
-    local xCoord, yCoord, instance = self:GetWorldCoordinatesFromZone(x, y, oZone)
+    local xCoord, yCoord, instance = HereBeDragons:GetWorldCoordinatesFromZone(x, y, oZone)
     if not xCoord then return nil, nil end
 
-    return self:GetZoneCoordinatesFromWorldInstance(xCoord, yCoord, instance, dZone, allowOutOfBounds)
+    return HereBeDragons:GetZoneCoordinatesFromWorldInstance(xCoord, yCoord, instance, dZone, allowOutOfBounds)
 end
 
 --- Return the distance from an origin position to a destination position in the same instance/continent.
@@ -420,21 +420,21 @@ end
 -- @return distance, deltaX, deltaY in yards
 function HereBeDragons:GetZoneDistance(oZone, oX, oY, dZone, dX, dY)
     local oInstance, dInstance
-    oX, oY, oInstance = self:GetWorldCoordinatesFromZone(oX, oY, oZone)
+    oX, oY, oInstance = HereBeDragons:GetWorldCoordinatesFromZone(oX, oY, oZone)
     if not oX then return nil, nil, nil end
 
-    dX, dY, dInstance = self:GetWorldCoordinatesFromZone(dX, dY, dZone)
+    dX, dY, dInstance = HereBeDragons:GetWorldCoordinatesFromZone(dX, dY, dZone)
     if not dX then return nil, nil, nil end
 
     if oInstance ~= dInstance then return nil, nil, nil end
 
-    return self:GetWorldDistance(oInstance, oX, oY, dX, dY)
+    return HereBeDragons:GetWorldDistance(oInstance, oX, oY, dX, dY)
 end
 
 --- Return the angle and distance from an origin position to a destination position in the same instance/continent.
 -- @return angle, distance where angle is in radians and distance in yards
 function HereBeDragons:GetWorldVector(instanceID, oX, oY, dX, dY)
-    local distance, deltaX, deltaY = self:GetWorldDistance(instanceID, oX, oY, dX, dY)
+    local distance, deltaX, deltaY = HereBeDragons:GetWorldDistance(instanceID, oX, oY, dX, dY)
     if not distance then return nil, nil end
 
     -- calculate the angle from deltaY and deltaX
@@ -454,20 +454,21 @@ end
 -- @return x, y, instanceID
 function HereBeDragons:GetUnitWorldPosition(unitId)
     if unitId == "player" or (UnitIsUnit and UnitIsUnit(unitId, "player")) then
-        return self:GetPlayerWorldPosition()
+        return HereBeDragons:GetPlayerWorldPosition()
     end
     return nil, nil, nil
 end
 
 --- Get the current world position of the player
 -- @return x, y, instanceID
+-- Questie calls this one as a plain function (HBD.GetPlayerWorldPosition()), so it must not use self.
 function HereBeDragons:GetPlayerWorldPosition()
     ReadPlayerPosition()
     if not (currentPlayerUIMapID and playerZoneX) then
         local data = currentPlayerUIMapID and mapData[currentPlayerUIMapID]
         return nil, nil, data and data.instance or nil
     end
-    return self:GetWorldCoordinatesFromZone(playerZoneX, playerZoneY, currentPlayerUIMapID)
+    return HereBeDragons:GetWorldCoordinatesFromZone(playerZoneX, playerZoneY, currentPlayerUIMapID)
 end
 
 --- Get the current zone and level of the player

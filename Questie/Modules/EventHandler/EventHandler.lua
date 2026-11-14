@@ -297,6 +297,16 @@ function EventHandler:RegisterLateEvents()
         Questie:RegisterEvent("TRACKED_ACHIEVEMENT_LIST_CHANGED", function(_, achievementId)
             AchievementEventHandler.TrackedAchievementListChanged(achievementId)
         end)
+        if QuestieCompat335.isLegacyClient and not _EventHandler.achievementHooksInstalled then
+            -- 3.3.5a fires no event when an achievement is tracked or untracked
+            _EventHandler.achievementHooksInstalled = true
+            hooksecurefunc("AddTrackedAchievement", function(achievementId)
+                AchievementEventHandler.TrackedAchievementListChanged(achievementId)
+            end)
+            hooksecurefunc("RemoveTrackedAchievement", function(achievementId)
+                AchievementEventHandler.TrackedAchievementListChanged(achievementId)
+            end)
+        end
 
         -- This fires pretty often, multiple times for a single Achievement change and also for things most likely not related to Achievements at all.
         -- We use a bucket to hinder this from spamming
@@ -491,11 +501,34 @@ end
 
 --- Fires when a System Message (yellow text) is output to the main chat window
 ---@param message string The message value from the CHAT_MSG_SYSTEM event
+local _learnedPatterns
+
 function _EventHandler:ChatMsgSystem(message)
     if issecretvalue and issecretvalue(message) then
         -- The text cannot identify reputation changes; check the current faction state instead.
         _EventHandler:ChatMsgCompatFactionChange()
         return
+    end
+
+    if QuestieCompat335.isLegacyClient then
+        -- 3.3.5a has no NEW_RECIPE_LEARNED: the message about a learned recipe or spell stands in for it
+        if not _learnedPatterns then
+            _learnedPatterns = {}
+            for _, globalName in ipairs({"ERR_LEARN_RECIPE_S", "ERR_LEARN_SPELL_S", "ERR_LEARN_ABILITY_S"}) do
+                local text = _G[globalName]
+                if type(text) == "string" then
+                    local pattern = text:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0"):gsub("%%s", ".+")
+                    _learnedPatterns[#_learnedPatterns + 1] = "^" .. pattern .. "$"
+                end
+            end
+        end
+        for _, pattern in ipairs(_learnedPatterns) do
+            if string.find(message, pattern) then
+                QuestEventHandler.NewRecipeLearned()
+                AvailableQuests.CalculateAndDrawAll()
+                break
+            end
+        end
     end
 
     -- When a new quest is accepted or completed quest is turned in, update the LibDataBroker text with the appropriate message
