@@ -575,8 +575,35 @@ function QuestieTracker:Enable()
     ReloadUI()
 end
 
+-- 3.3.5a: while Questie's tracker is on, the game's own quest watch list stays empty: AQW_Insert moves every watch
+-- into Questie's lists, and IsQuestWatched answers from them. When the tracker is turned off, the quests it tracks go
+-- back on the game's list, so the game's tracker and other addons that read the list carry on with them. QuestHelper's
+-- tracker lists exactly the quests IsQuestWatched reports. The game's list holds 25 quests, a full quest log.
+local function _ReturnWatchesToGame()
+    if not (QuestieCompat335 and QuestieCompat335.isLegacyClient) or type(AddQuestWatch) ~= "function" then
+        return
+    end
+    local limit = MAX_WATCHABLE_QUESTS or 25
+    local index = 1
+    -- Collapsed quests come after the visible entries in a 3.3.5a log: read on to the first absent title.
+    while true do
+        local title, _, _, isHeader, _, _, _, questId = QuestieCompat.GetQuestLogTitle(index)
+        if not title then
+            break
+        end
+        if (not isHeader) and questId and questId > 0 and QuestieTracker.IsTrackedByQuestie(questId)
+            and (not IsQuestWatched(index)) and GetNumQuestWatches() < limit then
+            AddQuestWatch(index)
+        end
+        index = index + 1
+    end
+end
+
 function QuestieTracker:Disable()
     Questie.db.profile.trackerEnabled = false
+    -- The game's own IsQuestWatched back first: the quests handed back are checked against it.
+    QuestieTracker:Unhook()
+    _ReturnWatchesToGame()
     QuestieTracker:ResetDurabilityFrame()
     QuestieTracker:ResetVoiceOverFrame()
     Questie.db.char.TrackedQuests = {}
@@ -585,16 +612,16 @@ function QuestieTracker:Disable()
     ReloadUI()
 end
 
--- Function for the Slash handler
+-- Function for the Slash handler. Through Enable and Disable, which reload the UI as the options' switch does:
+-- the tracker's hooks are set up at login, and turning it off hands its quests back to the game's watch list.
 function QuestieTracker:Toggle()
     if Questie.db.profile.trackerEnabled then
         Questie.Debug(Questie.DEBUG_DEVELOP, "[QuestieTracker:Toggle] - Tracker Disabled.")
-        Questie.db.profile.trackerEnabled = false
+        QuestieTracker:Disable()
     else
         Questie.Debug(Questie.DEBUG_DEVELOP, "[QuestieTracker:Toggle] - Tracker Enabled.")
-        Questie.db.profile.trackerEnabled = true
+        QuestieTracker:Enable()
     end
-    QuestieTracker:Update()
 end
 
 -- Minimizes the QuestieTracker

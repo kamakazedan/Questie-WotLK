@@ -46,6 +46,11 @@ Working on 3.3.5a:
   dungeon maps BetterMaps draws itself, Questie's icons and lines are hidden, as they belong to the game's map
   underneath. The lines' width and the button's place follow Magnify-WotLK's and Leatrix Maps' zoom the same
   way (not tried with those).
+- **[QuestHelper](https://github.com/kamakazedan/QuestHelper-WotLK)'s tracker:** to use it instead of
+  Questie's, untick Enable Tracker on the Tracker tab of Questie's options (or type `/questie tracker`), and
+  the UI reloads. While Questie's tracker is on, it keeps the quests it tracks in its own list, and the game's
+  watch list stays empty. Turning it off puts those quests back on the game's watch list, which is what
+  QuestHelper's tracker and the game's own tracker list. Turning it back on moves them into Questie's list again.
 - **Addons that add newer-client functions as globals** (CompactRaidFrame's `WotLKCompat.lua`, for example)
   don't change what Questie does: Questie checks the client itself rather than those globals.
 - **Addons built on the Ace3 libraries of 3.3.5a** (AtlasLoot, CompactRaidFrame's AbsorbsMonitor, CleanMinimap,
