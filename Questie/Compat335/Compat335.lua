@@ -105,7 +105,8 @@ end
 -- C_Timer (After, NewTimer, NewTicker)
 -------------------------------------------------------------------------------------------------
 
-if not C_Timer then
+-- Another addon may have added a partial C_Timer (often only After): the missing functions are added.
+if not (C_Timer and C_Timer.After and C_Timer.NewTimer and C_Timer.NewTicker) then
     local GetTime = GetTime
     local timerFrame = CreateFrame("Frame")
     timerFrame:Hide()
@@ -200,16 +201,16 @@ if not C_Timer then
         return duration
     end
 
-    C_Timer = {}
+    local timerApi = {}
 
     --- Calls callback() once after `duration` seconds (0 means the next frame).
-    function C_Timer.After(duration, callback)
+    function timerApi.After(duration, callback)
         duration = _Validate(duration, callback, "Usage: C_Timer.After(seconds, callback)")
         _Schedule(setmetatable({_due = GetTime() + duration, _callback = callback}, TimerMeta))
     end
 
     --- Calls callback(timer) once after `duration` seconds; the returned timer can be cancelled.
-    function C_Timer.NewTimer(duration, callback)
+    function timerApi.NewTimer(duration, callback)
         duration = _Validate(duration, callback, "Usage: C_Timer.NewTimer(seconds, callback)")
         local timer = setmetatable({_due = GetTime() + duration, _callback = callback, _passSelf = true}, TimerMeta)
         _Schedule(timer)
@@ -217,7 +218,7 @@ if not C_Timer then
     end
 
     --- Calls callback(ticker) every `duration` seconds, `iterations` times or until cancelled.
-    function C_Timer.NewTicker(duration, callback, iterations)
+    function timerApi.NewTicker(duration, callback, iterations)
         duration = _Validate(duration, callback, "Usage: C_Timer.NewTicker(seconds, callback[, iterations])")
         local timer = setmetatable({
             _due = GetTime() + duration,
@@ -229,6 +230,13 @@ if not C_Timer then
         }, TimerMeta)
         _Schedule(timer)
         return timer
+    end
+
+    C_Timer = C_Timer or {}
+    for name, func in pairs(timerApi) do
+        if type(C_Timer[name]) ~= "function" then
+            C_Timer[name] = func
+        end
     end
 end
 
