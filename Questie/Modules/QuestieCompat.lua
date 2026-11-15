@@ -57,7 +57,9 @@ end
 
 -- Embedded dropdowns need a backdrop mixin before they load. Inspected builds supply the tooltip subclass;
 -- older builds fall back to the base backdrop, without claiming identical tooltip styling.
-if not TooltipBackdropTemplateMixin then
+-- 3.3.5a: not there (the embedded dropdown library is a wrapper round the client's own menus), and another addon's
+-- BackdropTemplateMixin table must not turn into a global that claims tooltip templates.
+if (not QuestieCompat335.isLegacyClient) and not TooltipBackdropTemplateMixin then
     TooltipBackdropTemplateMixin = BackdropTemplateMixin
 end
 

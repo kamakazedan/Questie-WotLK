@@ -46,8 +46,10 @@ LE_PARTY_CATEGORY_INSTANCE = LE_PARTY_CATEGORY_INSTANCE or 2
 -- Frame templates
 -------------------------------------------------------------------------------------------------
 -- Later clients need BackdropTemplate for SetBackdrop; on 3.3.5a every frame has it already.
--- CreateFrame(..., QuestieCompat335.BackdropTemplate) works on both.
-QuestieCompat335.BackdropTemplate = BackdropTemplateMixin and "BackdropTemplate" or nil
+-- CreateFrame(..., QuestieCompat335.BackdropTemplate) works on both. Some 3.3.5a addons (CompactRaidFrame's
+-- WotLKCompat.lua among them) add a BackdropTemplateMixin table but no BackdropTemplate XML template, so on this
+-- client that table says nothing and CreateFrame with the template fails.
+QuestieCompat335.BackdropTemplate = (not QuestieCompat335.isLegacyClient) and BackdropTemplateMixin and "BackdropTemplate" or nil
 -- Dialog borders of later clients (Compat335.xml has this client's versions)
 QuestieCompat335.DialogBorderOpaqueTemplate = QuestieCompat335.isLegacyClient and "QuestieCompat335DialogBorderOpaqueTemplate" or "DialogBorderOpaqueTemplate"
 QuestieCompat335.DialogBorderDarkTemplate = QuestieCompat335.isLegacyClient and "QuestieCompat335DialogBorderDarkTemplate" or "DialogBorderDarkTemplate"
@@ -440,14 +442,21 @@ if not IsInRaid then
     end
 end
 
-if not IsInGroup then
-    --- 3.3.5a has no instance groups (LFG groups are ordinary parties), so that category is never true.
-    function IsInGroup(category)
-        if category == LE_PARTY_CATEGORY_INSTANCE then
-            return false
-        end
-        return GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0
+--- IsInGroup with its category. 3.3.5a has no instance groups (LFG groups are ordinary parties), so that
+--- category is never true. Questie uses this one: another addon's IsInGroup may ignore the category
+--- (CompactRaidFrame's does), which would send Questie's messages to INSTANCE_CHAT, a channel 3.3.5a lacks.
+function QuestieCompat335.IsInGroup(category)
+    if not QuestieCompat335.isLegacyClient then
+        return IsInGroup(category)
     end
+    if category == LE_PARTY_CATEGORY_INSTANCE then
+        return false
+    end
+    return GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0
+end
+
+if not IsInGroup then
+    IsInGroup = QuestieCompat335.IsInGroup
 end
 
 if not GetNumGroupMembers then
@@ -567,7 +576,8 @@ local function _AddMethods(object, methods)
     end
     for name, func in pairs(methods) do
         if object[name] == nil then
-            index[name] = func
+            -- rawset: a plain assignment to a widget type's method table can be dropped silently
+            rawset(index, name, func)
         end
     end
 end

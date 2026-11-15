@@ -14,7 +14,7 @@ local trackerBaseFrame
 ---@param baseFrame table @The Tracker base frame
 function AutoCompleteFrame.Initialize(baseFrame)
     trackerBaseFrame = baseFrame
-    autoCompleteFrame = CreateFrame("Button", "Questie_AutoComplete_Frame", baseFrame, BackdropTemplateMixin and "BackdropTemplate")
+    autoCompleteFrame = CreateFrame("Button", "Questie_AutoComplete_Frame", baseFrame, QuestieCompat335.BackdropTemplate)
 
     autoCompleteFrame:SetWidth(250)
     autoCompleteFrame:SetHeight(45)

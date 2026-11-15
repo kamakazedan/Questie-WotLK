@@ -657,7 +657,7 @@ local function _CreateOfferFrame(popupText, discordURL, index)
         Questie.Debug(Questie.DEBUG_DEVELOP, "[QuestieDebugOffer] - An offer is already open, not creating new frame")
         return
     end
-    local debugFrame = CreateFrame("Frame", "QuestieDebugOfferFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+    local debugFrame = CreateFrame("Frame", "QuestieDebugOfferFrame", UIParent, QuestieCompat335.BackdropTemplate)
     debugFrame:SetPoint("CENTER")
     debugFrame:SetMovable(true)
     debugFrame:EnableMouse(true)

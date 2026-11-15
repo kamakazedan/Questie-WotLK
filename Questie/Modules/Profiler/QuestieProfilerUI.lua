@@ -2417,7 +2417,7 @@ function QuestieProfilerUI:Create()
         return baseFrame
     end
 
-    baseFrame = CreateFrame("Frame", "QuestieProfilerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+    baseFrame = CreateFrame("Frame", "QuestieProfilerFrame", UIParent, QuestieCompat335.BackdropTemplate)
     baseFrame:SetSize(LAYOUT.windowDefaultWidth, LAYOUT.windowDefaultHeight)
     baseFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     baseFrame:SetFrameStrata("DIALOG")

@@ -4,7 +4,7 @@ local Tutorial = QuestieLoader:ImportModule("Tutorial")
 local l10n = QuestieLoader:ImportModule("l10n")
 
 function Tutorial.AutoRejectInBattlegroundsFrame()
-    local baseFrame = CreateFrame("Frame", "QuestieTutorialAutoRejectInBattlegrounds", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+    local baseFrame = CreateFrame("Frame", "QuestieTutorialAutoRejectInBattlegrounds", UIParent, QuestieCompat335.BackdropTemplate)
     baseFrame:SetSize(420, 170)
     baseFrame:SetPoint("CENTER", 0, 50)
     baseFrame:SetFrameStrata("HIGH")

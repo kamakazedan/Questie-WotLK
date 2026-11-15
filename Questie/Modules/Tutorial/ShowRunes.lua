@@ -6,7 +6,7 @@ local l10n = QuestieLoader:ImportModule("l10n")
 local AvailableQuests = QuestieLoader:ImportModule("AvailableQuests")
 
 function Tutorial.ShowRunes()
-    local baseFrame = CreateFrame("Frame", "QuestieTutorialShowRunes", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+    local baseFrame = CreateFrame("Frame", "QuestieTutorialShowRunes", UIParent, QuestieCompat335.BackdropTemplate)
     baseFrame:SetSize(525, 240)
     baseFrame:SetPoint("CENTER", 0, 50)
     baseFrame:SetFrameStrata("HIGH")

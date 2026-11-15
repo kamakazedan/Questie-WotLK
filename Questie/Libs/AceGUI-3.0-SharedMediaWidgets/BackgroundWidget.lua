@@ -38,7 +38,7 @@ do
 		if next(contentFrameCache) then
 			frame = table.remove(contentFrameCache)
 		else
-			frame = CreateFrame("Button", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate")
+			frame = CreateFrame("Button", nil, UIParent, (QuestieCompat335 and QuestieCompat335.BackdropTemplate))
 				--frame:SetWidth(200)
 				frame:SetHeight(18)
 				frame:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]], "ADD")
