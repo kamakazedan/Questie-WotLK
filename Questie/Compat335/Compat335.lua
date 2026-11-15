@@ -5,7 +5,8 @@
 --
 -- Rules followed here, because other addons share the global environment:
 --   * nothing that the client already provides is replaced; every shim checks first;
---   * only complete, behaviour-correct shims go into _G (C_Timer, Mixin, SetShown, ...);
+--   * only shims Questie or its libraries actually call go into _G, and only complete, behaviour-correct
+--     ones (C_Timer, SetShown, ...);
 --   * partial modern namespaces (C_Map, C_QuestLog, C_ChatInfo, Enum, ...) are NOT created globally,
 --     since other 3.3.5a addons may test for them to pick a code path. Questie reaches those through
 --     its own QuestieCompat335 table instead.
@@ -74,15 +75,11 @@ QuestieCompat335.CALENDAR_FULLDATE_MONTH_NAMES = CALENDAR_FULLDATE_MONTH_NAMES o
 -- Error reporting helpers
 -------------------------------------------------------------------------------------------------
 
--- Errors in callbacks are reported by xpcall to the current error handler directly. 3.3.5a's error frame
--- (Blizzard_DebugTools) reads the local variables 4 stack levels up from where it runs; with a function of
--- ours between it and the error, that level is error() itself, which has none, and the frame then fails on
--- every error that follows ("bad argument #6 to 'format'", then "C stack overflow").
-if not CallErrorHandler then
-    function CallErrorHandler(...)
-        return geterrorhandler()(...)
-    end
-end
+-- Errors in callbacks are reported with xpcall(func, geterrorhandler()): the handler itself, never a function
+-- of ours that calls it, and never called later from a pcall result. 3.3.5a's error frame (Blizzard_DebugTools)
+-- reads the local variables 4 stack levels up from where it runs; with anything else in between, that level is
+-- error() itself or the C code that started the script, which have none, and the frame then fails on every
+-- error that follows ("bad argument #6 to 'format'", then "C stack overflow").
 
 if not securecallfunction then
     local unpack = unpack
@@ -242,69 +239,8 @@ if not (C_Timer and C_Timer.After and C_Timer.NewTimer and C_Timer.NewTicker) th
 end
 
 -------------------------------------------------------------------------------------------------
--- Mixins
--------------------------------------------------------------------------------------------------
-
-if not Mixin then
-    function Mixin(object, ...)
-        for i = 1, select("#", ...) do
-            local mixin = select(i, ...)
-            for key, value in pairs(mixin) do
-                object[key] = value
-            end
-        end
-        return object
-    end
-end
-
-if not CreateFromMixins then
-    function CreateFromMixins(...)
-        return Mixin({}, ...)
-    end
-end
-
-if not CreateAndInitFromMixin then
-    function CreateAndInitFromMixin(mixin, ...)
-        local object = CreateFromMixins(mixin)
-        object:Init(...)
-        return object
-    end
-end
-
--------------------------------------------------------------------------------------------------
 -- Small utility functions from later clients
 -------------------------------------------------------------------------------------------------
-
-if not Lerp then
-    function Lerp(startValue, endValue, amount)
-        return (1 - amount) * startValue + amount * endValue
-    end
-end
-
-if not Clamp then
-    function Clamp(value, min, max)
-        if value > max then
-            return max
-        elseif value < min then
-            return min
-        end
-        return value
-    end
-end
-
-if not CreateVector2D then
-    local VectorMethods = {}
-    local VectorMeta = {__index = VectorMethods}
-    function VectorMethods:GetXY()
-        return self.x, self.y
-    end
-    function VectorMethods:SetXY(x, y)
-        self.x, self.y = x, y
-    end
-    function CreateVector2D(x, y)
-        return setmetatable({x = x, y = y}, VectorMeta)
-    end
-end
 
 if not FormatLargeNumber then
     --- 1234567 -> "1,234,567"
@@ -373,8 +309,17 @@ if not GetServerTime then
 end
 
 if not GetTimePreciseSec then
+    -- debugprofilestop() is this client's only sub-frame clock, but any addon can set it back to zero with
+    -- debugprofilestart(). Later clients' GetTimePreciseSec never goes back (Questie's profiler and time budgets
+    -- subtract two readings), so a reset is bridged: the clock carries on from the last reading.
+    local offset, last = 0, 0
     function GetTimePreciseSec()
-        return debugprofilestop() / 1000
+        local now = debugprofilestop()
+        if now < last then
+            offset = offset + last
+        end
+        last = now
+        return (now + offset) / 1000
     end
 end
 
@@ -478,15 +423,6 @@ if not GetNumSubgroupMembers then
     end
 end
 
-if not UnitIsGroupLeader then
-    function UnitIsGroupLeader(unit)
-        if unit == "player" or UnitIsUnit(unit, "player") then
-            return (IsRaidLeader() or IsPartyLeader()) and true or false
-        end
-        return UnitIsPartyLeader and UnitIsPartyLeader(unit) and true or false
-    end
-end
-
 -------------------------------------------------------------------------------------------------
 -- Widget methods
 -------------------------------------------------------------------------------------------------
@@ -508,10 +444,6 @@ end
 
 local function _IsForbidden()
     return false
-end
-
-local function _IsMouseMotionFocus(self)
-    return GetMouseFocus() == self
 end
 
 local function _SetResizeBounds(self, minWidth, minHeight, maxWidth, maxHeight)
@@ -550,7 +482,6 @@ local frameMethods = {
     SetShown = _SetShown,
     GetSize = _GetSize,
     IsForbidden = _IsForbidden,
-    IsMouseMotionFocus = _IsMouseMotionFocus,
     SetResizeBounds = _SetResizeBounds,
     SetFixedFrameStrata = _Ignore,
     SetFixedFrameLevel = _Ignore,
@@ -648,15 +579,6 @@ function QuestieCompat335.GetNumLines(fontString)
     return 1
 end
 
---- Calls a widget method only when this client has it (atlas, mask, keyboard propagation, ...).
----@return any
-function QuestieCompat335.Call(object, methodName, ...)
-    local method = object and object[methodName]
-    if method then
-        return method(object, ...)
-    end
-end
-
 --- Sound names for the numeric sound kit IDs used by newer code; this client's PlaySound takes names.
 QuestieCompat335.Sounds = {
     [799] = "gsTitleOptionExit",            -- SOUNDKIT.GS_TITLE_OPTION_EXIT
@@ -721,21 +643,4 @@ function QuestieCompat335.GetGuidInfo(guid)
         return kind, nil
     end
     return kind, tonumber(id)
-end
-
---- NPC (or object) ID from a GUID of either format.
----@param guid string?
----@return number? npcId
-function QuestieCompat335.GetNpcIdFromGuid(guid)
-    local kind, id = QuestieCompat335.GetGuidInfo(guid)
-    if kind == "Creature" or kind == "Vehicle" or kind == "GameObject" then
-        return id
-    end
-    return nil
-end
-
---- True when the GUID belongs to a creature (or vehicle) on either GUID format.
-function QuestieCompat335.IsCreatureGuid(guid)
-    local kind = QuestieCompat335.GetGuidInfo(guid)
-    return kind == "Creature" or kind == "Vehicle"
 end

@@ -71,7 +71,14 @@ function GroupEventHandler.GroupJoined()
     local checkTimer
     --We want this to be fairly quick.
     checkTimer = C_Timer.NewTicker(0.2, function()
-        local partyPending = UnitInParty("player")
+        -- 3.3.5a: UnitInParty("player") is 1 even without a group, which would keep this ticker running for good
+        -- after a group that broke up straight away.
+        local partyPending
+        if QuestieCompat335.isLegacyClient then
+            partyPending = QuestieCompat335.IsInGroup()
+        else
+            partyPending = UnitInParty("player")
+        end
         local isInParty = UnitInParty("party1")
         local isInRaid = UnitInRaid("raid1")
         if partyPending then

@@ -78,7 +78,11 @@ function QuestiePlayer:GetGroupType()
         return "raid";
     elseif(QuestieCompat335.IsInGroup(LE_PARTY_CATEGORY_INSTANCE)) then
         return "instance";
-    elseif(UnitInParty("player")) then
+    elseif QuestieCompat335.isLegacyClient and GetNumPartyMembers() > 0 then
+        -- 3.3.5a: UnitInParty("player") is 1 even without a group (so since patch 2.0.3), which made Questie send
+        -- its party messages while solo.
+        return "party";
+    elseif (not QuestieCompat335.isLegacyClient) and UnitInParty("player") then
         return "party";
     else
         return nil;

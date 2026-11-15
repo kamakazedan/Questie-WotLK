@@ -10,8 +10,9 @@
 --   * anything else that leaves the log is reported as removed, which Questie then treats as
 --     abandoned unless the quest is flagged completed.
 --
--- A collapsed quest log header hides its quests. Whether a quest left the log is therefore decided
--- from the number of quests in the log (which counts hidden quests too), not from the shown entries alone.
+-- Quests under a collapsed quest log header are listed after the shown entries (see Compat335Api.lua), so a
+-- walk to the first absent title sees them all. As a safeguard, a quest only counts as gone when the number
+-- of quests in the log (GetNumQuestLogEntries, which counts every quest) went down as well.
 
 local QuestieCompat335 = QuestieCompat335
 if not (QuestieCompat335 and QuestieCompat335.isLegacyClient) then
@@ -36,7 +37,7 @@ local abandonQuestID        -- quest marked with SetAbandonQuest
 
 local frame = CreateFrame("Frame")
 
---- Quests the quest log shows: [questID] = index, and how many.
+--- Quests the quest log lists (those under collapsed headers included): [questID] = index, and how many.
 local function _ShownQuests()
     local shown, count = {}, 0
     for index = 1, MAX_QUEST_LOG_INDEX do
@@ -52,11 +53,11 @@ local function _ShownQuests()
     return shown, count
 end
 
-local function _Dispatch(func, ...)
-    local ok, err = pcall(func, ...)
-    if not ok then
-        geterrorhandler()(err)
-    end
+--- Calls func(questID[, xp, money]); an error goes to the error handler from where it happened (see Compat335.lua).
+local function _Dispatch(func, questID, xp, money)
+    xpcall(function()
+        func(questID, xp, money)
+    end, geterrorhandler())
 end
 
 local function _TurnedIn(questID, info)
@@ -148,8 +149,8 @@ function QuestieCompat335.GetAcceptedQuestID(questLogIndex)
     QuestieCompat335.InvalidateQuestLogCache()
     local questID = QuestieCompat335.GetQuestIdAtLogIndex(questLogIndex)
     if questID and QuestEventHandler.IsQuestAccepted and QuestEventHandler.IsQuestAccepted(questID) then
-        -- That entry is a quest Questie already has: the new one is under a collapsed header.
-        -- It is picked up when it is shown (QuestEventHandler adopts quests found in the log).
+        -- That entry is a quest Questie already has, so the index did not lead to the new quest.
+        -- It is picked up by the next quest log scan (QuestEventHandler adopts quests found in the log).
         return nil
     end
     if questID then

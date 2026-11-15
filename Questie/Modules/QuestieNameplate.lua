@@ -503,8 +503,10 @@ local function _GetLegacyFrame(plate)
 
     local iconScale = Questie.db.profile.nameplateScale
     frame:SetParent(plate)
-    frame:SetFrameStrata("HIGH")
-    frame:SetFrameLevel(10)
+    -- In the nameplate's own layer, above its parts: in the HIGH layer the icons were drawn over open windows
+    -- (bags, quest log, character frame) that cover the nameplates themselves.
+    frame:SetFrameStrata(plate:GetFrameStrata())
+    frame:SetFrameLevel(plate:GetFrameLevel() + 10)
     frame:SetWidth(16 * iconScale)
     frame:SetHeight(16 * iconScale)
     frame:EnableMouse(false)

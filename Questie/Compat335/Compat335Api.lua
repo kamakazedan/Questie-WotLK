@@ -23,8 +23,9 @@ end
 -------------------------------------------------------------------------------------------------
 -- Quest log
 -------------------------------------------------------------------------------------------------
--- A collapsed header hides its quests from GetQuestLogTitle on this client. Everything below can
--- only see the quests that the quest log shows.
+-- On this client the quests under a collapsed header leave their place in the log: GetQuestLogTitle lists
+-- them after the shown entries (index > GetNumQuestLogEntries()), without their header. So a walk up to the
+-- first absent title sees every quest, and those indexes work with the other quest log functions.
 
 local indexCache = {}       -- [questID] = quest log index
 local indexCacheTime = -1
@@ -103,20 +104,6 @@ end
 function QuestieCompat335.GetNumQuests()
     local _, numQuests = GetNumQuestLogEntries()
     return numQuests or 0
-end
-
---- True when every quest in the log is shown (no header is collapsed).
----@return boolean
-function QuestieCompat335.IsQuestLogFullyExpanded()
-    local numEntries, numQuests = GetNumQuestLogEntries()
-    local shownQuests = 0
-    for index = 1, numEntries or 0 do
-        local title, _, _, _, isHeader = GetQuestLogTitle(index)
-        if title and not isHeader then
-            shownQuests = shownQuests + 1
-        end
-    end
-    return shownQuests == (numQuests or 0)
 end
 
 --- Questie's (Classic) return order for GetQuestLogTitle:
@@ -232,11 +219,9 @@ completedFrame:SetScript("OnEvent", function(self, event)
         QuestieCompat335.completedQuestsReady = true
         local callbacks = completedCallbacks
         completedCallbacks = {}
-        for _, callback in pairs(callbacks) do
-            local ok, err = pcall(callback)
-            if not ok then
-                geterrorhandler()(err)
-            end
+        for _, callback in ipairs(callbacks) do
+            -- The handler runs where the error happened, so the error frame can read its locals (see Compat335.lua).
+            xpcall(callback, geterrorhandler())
         end
     elseif not QuestieCompat335.completedQuestsReady and not queryPending then
         _RequestCompletedQuests()
@@ -463,6 +448,16 @@ QuestieCompat335.C_QuestLog = {
 local C_Map = {}
 QuestieCompat335.C_Map = C_Map
 
+-- The Vector2D of later clients, as far as Questie reads it (x and y).
+local VectorMethods = {}
+local VectorMeta = {__index = VectorMethods}
+function VectorMethods:GetXY()
+    return self.x, self.y
+end
+local function _CreateVector2D(x, y)
+    return setmetatable({x = x, y = y}, VectorMeta)
+end
+
 -- Continent names until the client's own (localized) names are read
 local CONTINENT_NAMES = {[1414] = "Kalimdor", [1415] = "Eastern Kingdoms", [1945] = "Outland", [113] = "Northrend"}
 
@@ -557,7 +552,7 @@ function C_Map.GetPlayerMapPosition(uiMapID, unit)
             return nil
         end
     end
-    return CreateVector2D(x, y)
+    return _CreateVector2D(x, y)
 end
 
 ---@param uiMapID number
@@ -572,7 +567,7 @@ function C_Map.GetWorldPosFromMapPos(uiMapID, mapPosition)
     if not x then
         return nil, nil
     end
-    return instance, CreateVector2D(x, y)
+    return instance, _CreateVector2D(x, y)
 end
 
 --- Not available on this client.
@@ -775,7 +770,6 @@ local FACTION_IDS = {
     ["Frenzyheart Tribe"] = 1104, ["The Oracles"] = 1105, ["The Ashen Verdict"] = 1156,
     ["Sholazar Basin"] = 1117, ["Wrath of the Lich King"] = 1097,
 }
-QuestieCompat335.FactionIdsByEnglishName = FACTION_IDS
 
 local factionNameById
 local factionIdByLocalName

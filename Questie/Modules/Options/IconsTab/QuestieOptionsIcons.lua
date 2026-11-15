@@ -469,6 +469,8 @@ function QuestieOptions.tabs.icons:Initialize()
                         order = 3.4,
                         name = function() return l10n("Hide Icons in Unexplored Areas"); end,
                         desc = function() return l10n("Hide icons in unexplored map regions."); end,
+                        -- 3.3.5a cannot tell which parts of a map are explored (QuestieMap.utils.IsExplored)
+                        hidden = QuestieCompat335.isLegacyClient,
                         width = 1.595,
                         disabled = function() return ((not Questie.db.profile.enabled) or (not Questie.db.profile.enableMapIcons)); end,
                         get = function() return Questie.db.profile.hideUnexploredMapIcons; end,

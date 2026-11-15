@@ -68,8 +68,6 @@ Working on 3.3.5a:
 The 3.3.5a client lacks many of the functions newer clients give addons. Questie works around most of
 them, but some things work differently:
 
-- **Collapsed quest log headers:** if a quest under a collapsed zone header in the quest log stops
-  updating, expand that header.
 - **Nameplate icons are matched by name.** Nameplates on this client do not say which NPC they belong
   to, only its name, so another NPC with the same name as a quest target gets the icon too. The icon on
   the target frame is exact.
@@ -80,7 +78,7 @@ them, but some things work differently:
   broadcasts to nearby players are off.
 - **Reputation requirements** are looked up by English faction names. On a client in another
   language, quests that need a certain reputation may be shown or hidden incorrectly.
-- Map icons are not hidden in map areas you have not explored yet.
+- Map icons are not hidden in map areas you have not explored yet, so that option is not offered.
 - Options are in the Ace3 options window rather than in the newer Blizzard settings panel.
 - Race sound choices for races added after Wrath (Goblin, Worgen, Pandaren) play nothing.
 

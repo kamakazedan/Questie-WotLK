@@ -124,8 +124,12 @@ function TrackerUtils:ShowQuestLog(quest)
     local questLogIndex = QuestieCompat.GetQuestLogIndexByID(quest.Id)
     QuestieCompat.SelectQuestLogEntry(questLogIndex)
 
+    -- 3.3.5a: the quest list is a HybridScrollFrame, scrolled in pixels, where the step arithmetic below scrolled the
+    -- list to its top. The quest log's own selection scrolls to the quest and highlights it, once the log is up (below).
+    local selectNatively = QuestieCompat335.isLegacyClient and questFrame == QuestLogFrame and QuestLog_SetSelection ~= nil and questLogIndex > 0
+
     -- Scroll to the quest in the quest log
-    if _QuestLogScrollBar then
+    if _QuestLogScrollBar and not selectNatively then
         local scrollSteps = _QuestLogScrollBar:GetValueStep()
         _QuestLogScrollBar:SetValue(questLogIndex * scrollSteps - scrollSteps * 3)
     end
@@ -145,6 +149,9 @@ function TrackerUtils:ShowQuestLog(quest)
 
     QuestieCompat.QuestLog_UpdateQuestDetails()
     QuestieCompat.QuestLog_Update()
+    if selectNatively then
+        QuestLog_SetSelection(questLogIndex)
+    end
 end
 
 ---@param title string The name of the WayPoint

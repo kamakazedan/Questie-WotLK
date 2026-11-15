@@ -499,10 +499,53 @@ function _EventHandler:PlayerLogin()
     QuestieInit:Init()
 end
 
---- Fires when a System Message (yellow text) is output to the main chat window
----@param message string The message value from the CHAT_MSG_SYSTEM event
+-- 3.3.5a: game messages come as text only, so they are recognised by the GlobalStrings format they were made from.
+
+--- A Lua pattern matching the whole text that a GlobalStrings format ("%s slain: %d/%d") makes. Positional
+--- specifiers ("%1$s", which some locales use) and literal percent signs ("%%") are understood as well.
+---@param text string
+---@return string pattern
+local function _FormatToPattern(text)
+    text = text:gsub("%%%%", "\003")
+    text = text:gsub("%%%d*%$?s", "\001")
+    text = text:gsub("%%%d*%$?d", "\002")
+    text = text:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+    text = text:gsub("\001", ".+")
+    text = text:gsub("\002", "%%d+")
+    text = text:gsub("\003", "%%%%")
+    return "^" .. text .. "$"
+end
+
+--- Patterns for the GlobalStrings named, skipping names this client does not have.
+---@param globalNames string[]
+---@return string[] patterns
+local function _FormatPatterns(globalNames)
+    local patterns = {}
+    for _, globalName in ipairs(globalNames) do
+        local text = _G[globalName]
+        if type(text) == "string" then
+            patterns[#patterns + 1] = _FormatToPattern(text)
+        end
+    end
+    return patterns
+end
+
+---@param message string
+---@param patterns string[]
+---@return boolean
+local function _MatchesAny(message, patterns)
+    for _, pattern in ipairs(patterns) do
+        if string.find(message, pattern) then
+            return true
+        end
+    end
+    return false
+end
+
 local _learnedPatterns
 
+--- Fires when a System Message (yellow text) is output to the main chat window
+---@param message string The message value from the CHAT_MSG_SYSTEM event
 function _EventHandler:ChatMsgSystem(message)
     if issecretvalue and issecretvalue(message) then
         -- The text cannot identify reputation changes; check the current faction state instead.
@@ -512,22 +555,10 @@ function _EventHandler:ChatMsgSystem(message)
 
     if QuestieCompat335.isLegacyClient then
         -- 3.3.5a has no NEW_RECIPE_LEARNED: the message about a learned recipe or spell stands in for it
-        if not _learnedPatterns then
-            _learnedPatterns = {}
-            for _, globalName in ipairs({"ERR_LEARN_RECIPE_S", "ERR_LEARN_SPELL_S", "ERR_LEARN_ABILITY_S"}) do
-                local text = _G[globalName]
-                if type(text) == "string" then
-                    local pattern = text:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0"):gsub("%%s", ".+")
-                    _learnedPatterns[#_learnedPatterns + 1] = "^" .. pattern .. "$"
-                end
-            end
-        end
-        for _, pattern in ipairs(_learnedPatterns) do
-            if string.find(message, pattern) then
-                QuestEventHandler.NewRecipeLearned()
-                AvailableQuests.CalculateAndDrawAll()
-                break
-            end
+        _learnedPatterns = _learnedPatterns or _FormatPatterns({"ERR_LEARN_RECIPE_S", "ERR_LEARN_SPELL_S", "ERR_LEARN_ABILITY_S"})
+        if _MatchesAny(message, _learnedPatterns) then
+            QuestEventHandler.NewRecipeLearned()
+            AvailableQuests.CalculateAndDrawAll()
         end
     end
 
@@ -556,11 +587,11 @@ local _QuestProgressMessages = {
     ["ERR_QUEST_FAILED_S"] = true,
 }
 
+local _questProgressPatterns
+
 --- Fires when a UI Info Message (yellow text) appears near the top of the screen
 ---@param errorType number The error type value from the UI_INFO_MESSAGE event
 ---@param message string The message value from the UI_INFO_MESSAGE event
-local _questProgressPatterns
-
 function _EventHandler:UiInfoMessage(errorType, message)
     if not GetGameMessageInfo then
         -- 3.3.5a: UI_INFO_MESSAGE(message), so recognise the message by its text
@@ -569,20 +600,14 @@ function _EventHandler:UiInfoMessage(errorType, message)
             return
         end
         if not _questProgressPatterns then
-            _questProgressPatterns = {}
+            local globalNames = {}
             for globalName in pairs(_QuestProgressMessages) do
-                local text = _G[globalName]
-                if type(text) == "string" then
-                    local pattern = "^" .. text:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0"):gsub("%%s", ".+"):gsub("%%d", "%%d+") .. "$"
-                    _questProgressPatterns[#_questProgressPatterns + 1] = pattern
-                end
+                globalNames[#globalNames + 1] = globalName
             end
+            _questProgressPatterns = _FormatPatterns(globalNames)
         end
-        for _, pattern in ipairs(_questProgressPatterns) do
-            if message:find(pattern) then
-                MinimapIcon:UpdateText(message)
-                return
-            end
+        if _MatchesAny(message, _questProgressPatterns) then
+            MinimapIcon:UpdateText(message)
         end
         return
     end

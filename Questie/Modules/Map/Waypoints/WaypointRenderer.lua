@@ -78,6 +78,7 @@ WaypointRenderer.TRIMMING = 1 / 8
 local LEGACY = QuestieCompat335 and QuestieCompat335.isLegacyClient
 local LEGACY_LINE_TEXTURE = QuestieLib.AddonPath .. "Icons\\waypoints\\waypoint-line-335.tga"
 local LEGACY_LENGTH_FACTOR = 64 / 62
+local abs, min, max, sqrt = math.abs, math.min, math.max, math.sqrt
 
 -- Debug hover area
 local WHITE_TEXTURE = "Interface\\BUTTONS\\WHITE8X8"
@@ -230,7 +231,7 @@ end
 ---@param halfWidth number Half the width of the line image (fade included)
 local function _DrawSegmentLegacy(texture, view, ax, ay, bx, by, halfWidth)
     local dx, dy = bx - ax, by - ay
-    local length = math.sqrt(dx * dx + dy * dy)
+    local length = sqrt(dx * dx + dy * dy)
     if length == 0 then
         texture:Hide()
         return
@@ -243,22 +244,21 @@ local function _DrawSegmentLegacy(texture, view, ax, ay, bx, by, halfWidth)
     local overhang = (imageLength - length) / 2
     local startX, startY = ax - ux * overhang, ay - uy * overhang
     local endX, endY = bx + ux * overhang, by + uy * overhang
-    local cornersX = {startX + nx * halfWidth, startX - nx * halfWidth, endX + nx * halfWidth, endX - nx * halfWidth}
-    local cornersY = {startY + ny * halfWidth, startY - ny * halfWidth, endY + ny * halfWidth, endY - ny * halfWidth}
-    local minX = math.min(cornersX[1], cornersX[2], cornersX[3], cornersX[4])
-    local maxX = math.max(cornersX[1], cornersX[2], cornersX[3], cornersX[4])
-    local minY = math.min(cornersY[1], cornersY[2], cornersY[3], cornersY[4])
-    local maxY = math.max(cornersY[1], cornersY[2], cornersY[3], cornersY[4])
+    -- The box around the rectangle's four corners (start and end, each +/- the half width across). This runs for
+    -- every segment of every drawn path, so without tables or closures.
+    local acrossX, acrossY = abs(nx * halfWidth), abs(ny * halfWidth)
+    local minX, maxX = min(startX, endX) - acrossX, max(startX, endX) + acrossX
+    local minY, maxY = min(startY, endY) - acrossY, max(startY, endY) + acrossY
     local width = halfWidth * 2
-    -- texture coordinates of a point of the box
-    local function uv(x, y)
-        local px, py = x - startX, y - startY
-        return (px * ux + py * uy) / imageLength, (px * nx + py * ny) / width + 0.5
-    end
-    local ulx, uly = uv(minX, minY)
-    local llx, lly = uv(minX, maxY)
-    local urx, ury = uv(maxX, minY)
-    local lrx, lry = uv(maxX, maxY)
+    -- texture coordinates of the box's corners: u along the image, v across it
+    local px, py = minX - startX, minY - startY
+    local ulx, uly = (px * ux + py * uy) / imageLength, (px * nx + py * ny) / width + 0.5
+    px, py = minX - startX, maxY - startY
+    local llx, lly = (px * ux + py * uy) / imageLength, (px * nx + py * ny) / width + 0.5
+    px, py = maxX - startX, minY - startY
+    local urx, ury = (px * ux + py * uy) / imageLength, (px * nx + py * ny) / width + 0.5
+    px, py = maxX - startX, maxY - startY
+    local lrx, lry = (px * ux + py * uy) / imageLength, (px * nx + py * ny) / width + 0.5
     texture:ClearAllPoints()
     texture:SetPoint("TOPLEFT", view, "TOPLEFT", minX, -minY)
     texture:SetPoint("BOTTOMRIGHT", view, "TOPLEFT", maxX, -maxY)
