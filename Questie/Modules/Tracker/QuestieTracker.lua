@@ -188,6 +188,50 @@ function QuestieTracker.SetupDisabledWatchRefresh()
     end
 end
 
+-- 3.3.5a: while Questie's tracker is on, the game's own quest watch list stays empty: AQW_Insert moves every watch
+-- into Questie's lists, and IsQuestWatched answers from them. When the tracker is turned off, the quests it tracks go
+-- back on the game's list, so the game's tracker and other addons that read the list carry on with them. QuestHelper's
+-- tracker lists exactly the quests IsQuestWatched reports. The game's list holds 25 quests, a full quest log.
+local function _ReturnWatchesToGame()
+    if not (QuestieCompat335 and QuestieCompat335.isLegacyClient) or type(AddQuestWatch) ~= "function" then
+        return
+    end
+    local limit = MAX_WATCHABLE_QUESTS or 25
+    local index = 1
+    -- Collapsed quests come after the visible entries in a 3.3.5a log: read on to the first absent title.
+    while true do
+        local title, _, _, isHeader, _, _, _, questId = QuestieCompat.GetQuestLogTitle(index)
+        if not title then
+            break
+        end
+        if (not isHeader) and questId and questId > 0 and QuestieTracker.IsTrackedByQuestie(questId)
+            and (not IsQuestWatched(index)) and GetNumQuestWatches() < limit then
+            AddQuestWatch(index)
+        end
+        index = index + 1
+    end
+end
+
+-- 3.3.5a: this character's tracker ran on when it last played, so the game's watch list was left empty, but the
+-- tracker is off now: turned off on another character (the setting is shared by the profile), by /questie tracker
+-- before that went through Disable, or by a Questie that did not hand quests back yet. While the list is still empty,
+-- the quests Questie tracked for this character go on it, once. A list with quests on it is the player's own.
+-- Questie.db.char.trackerWatchesReturned: true once the game's list has this character's watches back; cleared
+-- whenever the tracker runs and holds them again.
+local function _ReturnWatchesOnce()
+    if Questie.db.char.trackerWatchesReturned or not (QuestieCompat335 and QuestieCompat335.isLegacyClient) then
+        return
+    end
+    local _, numQuests = QuestieCompat.GetNumQuestLogEntries()
+    if (numQuests or 0) == 0 then
+        return -- nothing in the log yet: tried again at the next login
+    end
+    if GetNumQuestWatches() == 0 then
+        _ReturnWatchesToGame()
+    end
+    Questie.db.char.trackerWatchesReturned = true
+end
+
 -- Saved focus restore. Startup can run before the focused quest's data is ready, so Initialize tries once
 -- and Update retries after each refresh. Once the timeout passes, a failed attempt means the target is
 -- invalid and the focus is cleared, as startup did before retries existed.
@@ -239,8 +283,12 @@ function QuestieTracker.Initialize()
         -- filter in sync with the player's Blizzard quest watches (see QuestieQuest:IsQuestTracked),
         -- since the normal watch -> map refresh below is skipped while the tracker UI is off.
         QuestieTracker.SetupDisabledWatchRefresh()
+        _ReturnWatchesOnce()
         return
     end
+
+    -- From here on Questie holds this character's quest watches (AQW_Insert): they go back when the tracker is off.
+    Questie.db.char.trackerWatchesReturned = nil
 
     durabilityInitialPosition = {DurabilityFrame:GetPoint()}
 
@@ -575,35 +623,12 @@ function QuestieTracker:Enable()
     ReloadUI()
 end
 
--- 3.3.5a: while Questie's tracker is on, the game's own quest watch list stays empty: AQW_Insert moves every watch
--- into Questie's lists, and IsQuestWatched answers from them. When the tracker is turned off, the quests it tracks go
--- back on the game's list, so the game's tracker and other addons that read the list carry on with them. QuestHelper's
--- tracker lists exactly the quests IsQuestWatched reports. The game's list holds 25 quests, a full quest log.
-local function _ReturnWatchesToGame()
-    if not (QuestieCompat335 and QuestieCompat335.isLegacyClient) or type(AddQuestWatch) ~= "function" then
-        return
-    end
-    local limit = MAX_WATCHABLE_QUESTS or 25
-    local index = 1
-    -- Collapsed quests come after the visible entries in a 3.3.5a log: read on to the first absent title.
-    while true do
-        local title, _, _, isHeader, _, _, _, questId = QuestieCompat.GetQuestLogTitle(index)
-        if not title then
-            break
-        end
-        if (not isHeader) and questId and questId > 0 and QuestieTracker.IsTrackedByQuestie(questId)
-            and (not IsQuestWatched(index)) and GetNumQuestWatches() < limit then
-            AddQuestWatch(index)
-        end
-        index = index + 1
-    end
-end
-
 function QuestieTracker:Disable()
     Questie.db.profile.trackerEnabled = false
     -- The game's own IsQuestWatched back first: the quests handed back are checked against it.
     QuestieTracker:Unhook()
     _ReturnWatchesToGame()
+    Questie.db.char.trackerWatchesReturned = true
     QuestieTracker:ResetDurabilityFrame()
     QuestieTracker:ResetVoiceOverFrame()
     Questie.db.char.TrackedQuests = {}

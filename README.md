@@ -51,6 +51,8 @@ Working on 3.3.5a:
   the UI reloads. While Questie's tracker is on, it keeps the quests it tracks in its own list, and the game's
   watch list stays empty. Turning it off puts those quests back on the game's watch list, which is what
   QuestHelper's tracker and the game's own tracker list. Turning it back on moves them into Questie's list again.
+  The setting is shared by your characters, so each other character gets its quests back at its next login,
+  if its watch list is still empty.
 - **Addons that add newer-client functions as globals** (CompactRaidFrame's `WotLKCompat.lua`, for example)
   don't change what Questie does: Questie checks the client itself rather than those globals.
 - **Addons built on the Ace3 libraries of 3.3.5a** (AtlasLoot, CompactRaidFrame's AbsorbsMonitor, CleanMinimap,
