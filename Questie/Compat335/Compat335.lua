@@ -74,11 +74,10 @@ QuestieCompat335.CALENDAR_FULLDATE_MONTH_NAMES = CALENDAR_FULLDATE_MONTH_NAMES o
 -- Error reporting helpers
 -------------------------------------------------------------------------------------------------
 
-local function _ReportError(err)
-    local handler = geterrorhandler()
-    return handler(err)
-end
-
+-- Errors in callbacks are reported by xpcall to the current error handler directly. 3.3.5a's error frame
+-- (Blizzard_DebugTools) reads the local variables 4 stack levels up from where it runs; with a function of
+-- ours between it and the error, that level is error() itself, which has none, and the frame then fails on
+-- every error that follows ("bad argument #6 to 'format'", then "C stack overflow").
 if not CallErrorHandler then
     function CallErrorHandler(...)
         return geterrorhandler()(...)
@@ -96,10 +95,10 @@ if not securecallfunction then
     function securecallfunction(func, ...)
         local n = select("#", ...)
         if n == 0 then
-            return _Return(xpcall(func, _ReportError))
+            return _Return(xpcall(func, geterrorhandler()))
         end
         local args = {...}
-        return _Return(xpcall(function() return func(unpack(args, 1, n)) end, _ReportError))
+        return _Return(xpcall(function() return func(unpack(args, 1, n)) end, geterrorhandler()))
     end
 end
 
@@ -140,9 +139,9 @@ if not (C_Timer and C_Timer.After and C_Timer.NewTimer and C_Timer.NewTicker) th
     local function _Fire(timer)
         local callback = timer._callback
         if timer._passSelf then
-            xpcall(function() callback(timer) end, _ReportError)
+            xpcall(function() callback(timer) end, geterrorhandler())
         else
-            xpcall(callback, _ReportError)
+            xpcall(callback, geterrorhandler())
         end
     end
 

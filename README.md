@@ -48,6 +48,13 @@ Working on 3.3.5a:
   way (not tried with those).
 - **Addons that add newer-client functions as globals** (CompactRaidFrame's `WotLKCompat.lua`, for example)
   don't change what Questie does: Questie checks the client itself rather than those globals.
+- **Addons built on the Ace3 libraries of 3.3.5a** (AtlasLoot, CompactRaidFrame's AbsorbsMonitor, CleanMinimap,
+  QuestHelper and most others): Questie carries newer copies of the shared libraries, and the game gives every
+  addon the newest copy it finds, so those addons run on Questie's. On 3.3.5a, Questie's copies keep the rules
+  those addons rely on. AceComm takes message prefixes longer than 16 characters, and sends and receives in the
+  3.3.5a message format, so those addons still talk to players who don't run Questie. Keybinding options in
+  their option windows work. An error in another addon's code that runs through these libraries shows as one
+  error in Blizzard's error window, not a chain of "bad argument #6 to 'format'" and "C stack overflow".
 
 ## Differences from Questie on newer clients
 
@@ -77,7 +84,10 @@ Every Lua file passes a Lua 5.1 syntax check, and the code was scanned for calls
 API and widgets) through login, a relog with saved settings, the world map, tooltips, nameplates,
 quest progress, accepting, turning in and abandoning quests, auto-accept, party sharing, the tracker,
 the options window and the Journey, also next to CompactRaidFrame's compatibility globals and with the
-world map rebuilt the way BetterMaps-WotLK rebuilds it. Testing in the real game has started, and the errors found so
+world map rebuilt the way BetterMaps-WotLK rebuilds it. It was also run after CleanMinimap and the 3.3.5a Ace3
+libraries of CompactRaidFrame and QuestHelper, with an addon written the way AtlasLoot is: their comms,
+timers, events, saved settings and option windows on Questie's copies of the libraries, compared with the
+3.3.5a ones. Testing in the real game has started, and the errors found so
 far are fixed. If you see Lua errors, turn on error display with `/console scriptErrors 1` (or use
 BugGrabber/BugSack) and report the full error text.
 

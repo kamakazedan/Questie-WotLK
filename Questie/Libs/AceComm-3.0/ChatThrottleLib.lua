@@ -389,16 +389,12 @@ local function IsThrottledSendResult(result)
 	return result == SendAddonMessageResult.AddonMessageThrottle
 end
 
--- A copy of this function exists in FrameXML, but for clarity it's here too.
-local function CallErrorHandler(...)
-	return geterrorhandler()(...)
-end
-
 local function PerformSend(sendFunction, ...)
 	bMyTraffic = true
-	-- 3.3.5a: xpcall does not forward extra arguments in Lua 5.1, so pack them into a closure
+	-- 3.3.5a: xpcall does not forward extra arguments in Lua 5.1, so pack them into a closure. Errors go to the
+	-- current handler directly, so 3.3.5a's error frame finds the locals it reads (see AceAddon-3.0's safecall).
 	local args, argCount = {...}, select("#", ...)
-	local sendResult = MapToSendResult(xpcall(function() return sendFunction(unpack(args, 1, argCount)) end, CallErrorHandler))
+	local sendResult = MapToSendResult(xpcall(function() return sendFunction(unpack(args, 1, argCount)) end, geterrorhandler()))
 	bMyTraffic = false
 	return sendResult
 end

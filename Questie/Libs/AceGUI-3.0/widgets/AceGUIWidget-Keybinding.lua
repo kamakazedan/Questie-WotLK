@@ -199,7 +199,9 @@ local function Constructor()
 	button:SetScript("OnKeyDown", Keybinding_OnKeyDown)
 	button:SetScript("OnMouseDown", Keybinding_OnMouseDown)
 	button:SetScript("OnMouseWheel", Keybinding_OnMouseWheel)
-	button:SetScript("OnGamePadButtonDown", Keybinding_OnKeyDown)
+	if button.EnableGamePadButton then -- 3.3.5a: no gamepads, and no such script
+		button:SetScript("OnGamePadButtonDown", Keybinding_OnKeyDown)
+	end
 	button:SetPoint("BOTTOMLEFT")
 	button:SetPoint("BOTTOMRIGHT")
 	button:SetHeight(24)

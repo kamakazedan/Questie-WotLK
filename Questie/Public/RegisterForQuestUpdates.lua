@@ -22,10 +22,10 @@ function QuestieAPI.PropagateQuestUpdate(questId, objectiveIndices, triggerReaso
     for _, callback in pairs(questUpdateCallbacks) do
         if next(objectiveIndices) then
             for _, objectiveIndex in pairs(objectiveIndices) do
-                xpcall(function() callback(questId, objectiveIndex, triggerReason) end, CallErrorHandler)
+                xpcall(function() callback(questId, objectiveIndex, triggerReason) end, geterrorhandler())
             end
         else
-            xpcall(function() callback(questId, nil, triggerReason) end, CallErrorHandler)
+            xpcall(function() callback(questId, nil, triggerReason) end, geterrorhandler())
         end
     end
 end

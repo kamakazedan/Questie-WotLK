@@ -13,7 +13,7 @@ function Questie.API.RegisterOnReady(callback)
     end
 
     if Questie.API.isReady then
-        xpcall(callback, CallErrorHandler)
+        xpcall(callback, geterrorhandler())
         return
     end
 
@@ -26,7 +26,7 @@ function QuestieAPI.PropagateOnReady()
     end
 
     for _, callback in pairs(onReadyCallbacks) do
-        xpcall(callback, CallErrorHandler)
+        xpcall(callback, geterrorhandler())
     end
     onReadyCallbacks = {}
 end

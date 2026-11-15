@@ -60,19 +60,18 @@ local bucketCache = setmetatable({}, {__mode='k'})
 ]]
 local xpcall = xpcall
 
-local function errorhandler(err)
-	return geterrorhandler()(err)
-end
 
 local function safecall(func, ...)
 	if func then
-		-- 3.3.5a: xpcall does not forward extra arguments in Lua 5.1, so pack them into a closure
+		-- 3.3.5a: xpcall does not forward extra arguments in Lua 5.1, so pack them into a closure. Errors go to the
+		-- current handler directly: 3.3.5a's error frame reads the locals 4 levels up from it, and with a function
+		-- of ours in between those are error()'s, which has none, and the frame fails on every error after that.
 		local argCount = select("#", ...)
 		if argCount == 0 then
-			return xpcall(func, errorhandler)
+			return xpcall(func, geterrorhandler())
 		end
 		local args = {...}
-		return xpcall(function() return func(unpack(args, 1, argCount)) end, errorhandler)
+		return xpcall(function() return func(unpack(args, 1, argCount)) end, geterrorhandler())
 	end
 end
 

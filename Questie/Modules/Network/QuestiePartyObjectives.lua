@@ -146,7 +146,7 @@ local function _ScheduleUnload()
     unloadScheduled = true
     C_Timer.After(0, function()
         unloadScheduled = false
-        xpcall(_UnloadPendingIcons, CallErrorHandler)
+        xpcall(_UnloadPendingIcons, geterrorhandler())
         -- Also reached when an unload failed, so the queue is retired and the icons behind it still get unloaded
         if nextPendingUnload > pendingUnloadCount then
             pendingUnloads = {}
@@ -581,7 +581,7 @@ _ProcessQueue = function(queue, index)
         C_Timer.After(0, function()
             local ok = xpcall(function()
                 _ProcessQueue(queue, stop + 1)
-            end, CallErrorHandler)
+            end, geterrorhandler())
             if not ok then
                 processing = false
             end
@@ -640,7 +640,7 @@ _ScheduleProcessing = function()
         local ok = xpcall(function()
             updateScheduled = false
             _ProcessScheduled()
-        end, CallErrorHandler)
+        end, geterrorhandler())
         if not ok then
             updateScheduled = false
             processing = false

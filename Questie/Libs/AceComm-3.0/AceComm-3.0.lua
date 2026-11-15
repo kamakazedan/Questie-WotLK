@@ -35,6 +35,12 @@ local error, assert = error, assert
 -- WoW APIs
 local Ambiguate = Ambiguate
 
+-- 3.3.5a: an addon message there is prefix and text in one 254-byte message; prefixes are not registered and have
+-- no length limit, and the AceComm of that time (r6) marks the parts of a long message on the end of the prefix.
+-- LibStub gives every addon on the client the newest copy, this one, and they talk to players who run the 3.3.5a
+-- one, so on that client this copy registers, sends and receives the way r6 does.
+local LEGACY = QuestieCompat335 and QuestieCompat335.isLegacyClient
+
 AceComm.embeds = AceComm.embeds or {}
 
 -- for my sanity and yours, let's give the message type bytes some names
@@ -58,19 +64,64 @@ function AceComm:RegisterComm(prefix, method)
 		method = "OnCommReceived"
 	end
 
-	if #prefix > 16 then -- TODO: 15?
-		error("AceComm:RegisterComm(prefix,method): prefix length is limited to 16 characters")
+	if not LEGACY then
+		if #prefix > 16 then -- TODO: 15?
+			error("AceComm:RegisterComm(prefix,method): prefix length is limited to 16 characters")
+		end
+		if C_ChatInfo then
+			C_ChatInfo.RegisterAddonMessagePrefix(prefix)
+		else
+			RegisterAddonMessagePrefix(prefix)
+		end
 	end
-	if C_ChatInfo then
-		C_ChatInfo.RegisterAddonMessagePrefix(prefix)
-	elseif RegisterAddonMessagePrefix then
-		RegisterAddonMessagePrefix(prefix)
-	end -- 3.3.5a: prefixes need no registration
 
 	return AceComm._RegisterComm(self, prefix, method)	-- created by CallbackHandler
 end
 
 local warnedPrefix=false
+
+-- 3.3.5a: as AceComm-3.0 r6 sends
+local function SendCommMessageLegacy(prefix, text, distribution, target, prio, callbackFn, callbackArg)
+	if strfind(prefix, "[\001-\003]") then
+		error("SendCommMessage: Characters \\001--\\003 in prefix are reserved for AceComm metadata", 3)
+	end
+
+	local textlen = #text
+	local maxtextlen = 254 - #prefix	-- 254 is the max length of prefix + text that can be sent in one message
+	local queueName = prefix..distribution..(target or "")
+
+	local ctlCallback = nil
+	if callbackFn then
+		ctlCallback = function(sent, sendResult)
+			return callbackFn(callbackArg, sent, textlen, sendResult)
+		end
+	end
+
+	if textlen <= maxtextlen then
+		-- fits all in one message
+		CTL:SendAddonMessage(prio, prefix, text, distribution, target, queueName, ctlCallback, textlen)
+	else
+		maxtextlen = maxtextlen - 1	-- 1 extra byte for part indicator in prefix
+
+		-- first part
+		local chunk = strsub(text, 1, maxtextlen)
+		CTL:SendAddonMessage(prio, prefix..MSG_MULTI_FIRST, chunk, distribution, target, queueName, ctlCallback, maxtextlen)
+
+		-- continuation
+		local pos = 1+maxtextlen
+		local prefix2 = prefix..MSG_MULTI_NEXT
+
+		while pos+maxtextlen <= textlen do
+			chunk = strsub(text, pos, pos+maxtextlen-1)
+			CTL:SendAddonMessage(prio, prefix2, chunk, distribution, target, queueName, ctlCallback, pos+maxtextlen-1)
+			pos = pos + maxtextlen
+		end
+
+		-- final part
+		chunk = strsub(text, pos)
+		CTL:SendAddonMessage(prio, prefix..MSG_MULTI_LAST, chunk, distribution, target, queueName, ctlCallback, textlen)
+	end
+end
 
 --- Send a message over the Addon Channel
 -- @param prefix A printable character (\032-\255) classification of the message (typically AddonName or AddonNameEvent)
@@ -91,12 +142,13 @@ function AceComm:SendCommMessage(prefix, text, distribution, target, prio, callb
 		error('Usage: SendCommMessage(addon, "prefix", "text", "distribution"[, "target"[, "prio"[, callbackFn, callbackarg]]])', 2)
 	end
 
+	if LEGACY then
+		SendCommMessageLegacy(prefix, text, distribution, target, prio, callbackFn, callbackArg) -- not a tail call: error level 3 is the caller
+		return
+	end
+
 	local textlen = #text
 	local maxtextlen = 255  -- Yes, the max is 255 even if the dev post said 256. I tested. Char 256+ get silently truncated. /Mikk, 20110327
-	if QuestieCompat335 and QuestieCompat335.isLegacyClient then
-		-- 3.3.5a: prefix, tab separator and text share a single 255 byte message
-		maxtextlen = 254 - #prefix
-	end
 	local queueName = prefix
 
 	local ctlCallback = nil
@@ -268,8 +320,32 @@ local function OnEvent(self, event, prefix, message, distribution, sender)
 	end
 end
 
+-- 3.3.5a: as AceComm-3.0 r6 receives. A part of a long message comes with its marker on the end of the prefix, and is
+-- put back together if the prefix without it is registered.
+local function OnEventLegacy(self, event, prefix, message, distribution, sender)
+	if event == "CHAT_MSG_ADDON" then
+		local marker = strsub(prefix, -1)
+		if marker == MSG_MULTI_FIRST or marker == MSG_MULTI_NEXT or marker == MSG_MULTI_LAST then
+			local origprefix = strsub(prefix, 1, -2)
+			local handlers = rawget(AceComm.callbacks.events, origprefix)
+			if handlers and next(handlers) then
+				if marker == MSG_MULTI_FIRST then
+					AceComm:OnReceiveMultipartFirst(origprefix, message, distribution, sender)
+				elseif marker == MSG_MULTI_NEXT then
+					AceComm:OnReceiveMultipartNext(origprefix, message, distribution, sender)
+				else
+					AceComm:OnReceiveMultipartLast(origprefix, message, distribution, sender)
+				end
+				return
+			end
+		end
+		-- single part: fire it off immediately and let CallbackHandler decide if it's registered or not
+		AceComm.callbacks:Fire(prefix, message, distribution, sender)
+	end
+end
+
 AceComm.frame = AceComm.frame or CreateFrame("Frame", "AceComm30Frame")
-AceComm.frame:SetScript("OnEvent", OnEvent)
+AceComm.frame:SetScript("OnEvent", LEGACY and OnEventLegacy or OnEvent)
 AceComm.frame:UnregisterAllEvents()
 AceComm.frame:RegisterEvent("CHAT_MSG_ADDON")
 
