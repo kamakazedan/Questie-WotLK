@@ -20,7 +20,8 @@ servers. QuestieDB is trimmed to the Wrath of the Lich King data.
 
 - `/questie` opens the options window. **Interface → AddOns → Questie** has a button that opens it as well.
 - `/questie help` lists the other commands (`/questie journey`, `/questie tracker`, `/questie minimap`, ...).
-- Questie puts its button on the minimap and in the top-right corner of the world map.
+- Questie puts its button on the minimap and in the top-right corner of the world map. A right click on a
+  map icon goes to the map underneath (zooming it out), as on newer clients.
 
 Working on 3.3.5a:
 
@@ -34,6 +35,19 @@ Working on 3.3.5a:
 - Quest icons on nameplates and on the target frame
 - Sharing quest progress with party members who run this version
 - Holiday event quests, read from the in-game calendar
+
+## With other addons
+
+- **[BetterMaps-WotLK](https://github.com/kamakazedan/BetterMaps-WotLK)** (1.3.16 or later): Questie's icons keep
+  their size and spot at any zoom, and a drag that starts on one of them still moves the map. The patrol path
+  lines stay on their spots and as wide on screen at any zoom. Questie's map button stays in the top-right corner
+  of the map in view, and in BetterMaps' small window it comes and goes with the window's frame. While
+  BetterMaps shows its coordinates (`/bmaps coords on`), Questie leaves its own off the map's title. On the
+  dungeon maps BetterMaps draws itself, Questie's icons and lines are hidden, as they belong to the game's map
+  underneath. The lines' width and the button's place follow Magnify-WotLK's and Leatrix Maps' zoom the same
+  way (not tried with those).
+- **Addons that add newer-client functions as globals** (CompactRaidFrame's `WotLKCompat.lua`, for example)
+  don't change what Questie does: Questie checks the client itself rather than those globals.
 
 ## Differences from Questie on newer clients
 
@@ -62,7 +76,8 @@ Every Lua file passes a Lua 5.1 syntax check, and the code was scanned for calls
 3.3.5a client does not have. Questie was also run in a simulated 3.3.5a client (a mock of the game's
 API and widgets) through login, a relog with saved settings, the world map, tooltips, nameplates,
 quest progress, accepting, turning in and abandoning quests, auto-accept, party sharing, the tracker,
-the options window and the Journey. Testing in the real game has started, and the errors found so
+the options window and the Journey, also next to CompactRaidFrame's compatibility globals and with the
+world map rebuilt the way BetterMaps-WotLK rebuilds it. Testing in the real game has started, and the errors found so
 far are fixed. If you see Lua errors, turn on error display with `/console scriptErrors 1` (or use
 BugGrabber/BugSack) and report the full error text.
 

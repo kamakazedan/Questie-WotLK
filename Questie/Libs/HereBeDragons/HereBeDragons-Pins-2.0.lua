@@ -324,6 +324,16 @@ local function SetCanvasFrameLevel()
 end
 SetCanvasFrameLevel()
 
+-- BetterMaps-WotLK draws dungeon maps of its own over the game's map and makes the game's map invisible meanwhile,
+-- with all that is on it. Invisible pins would still take the mouse there, so the canvas hides along.
+hooksecurefunc(WorldMapButton, "SetAlpha", function()
+    if QuestieCompat335.IsWorldMapCanvasShown() then
+        canvas:Show()
+    else
+        canvas:Hide()
+    end
+end)
+
 local activePins = {} -- pin frame -> true
 local freePins = {}
 

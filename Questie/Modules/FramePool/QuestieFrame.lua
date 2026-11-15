@@ -120,8 +120,11 @@ function QuestieFrame.CreateIconFrame(frameId, OnEnter)
     newFrame:SetScript("OnEnter", OnEnter); --Script Toolip
     newFrame:SetScript("OnLeave", _QuestieFrame.OnLeave) --Script Exit Tooltip
     if QuestieCompat335.isLegacyClient then
-        -- 3.3.5a cannot pass clicks through; OnClick hands right clicks to the map instead.
+        -- 3.3.5a cannot pass clicks through; OnClick hands right clicks to the map instead, and a drag that starts
+        -- on an icon goes to a zoom addon that moves the map with drags (Compat335/Compat335Api.lua).
         newFrame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        newFrame:SetScript("OnMouseDown", _QuestieFrame.OnMouseDown)
+        newFrame:SetScript("OnMouseUp", _QuestieFrame.OnMouseUp)
     else
         newFrame:RegisterForClicks("LeftButtonUp")
     end
@@ -222,14 +225,40 @@ function _QuestieFrame.RetryRightClickPassThrough(frame)
     QuestieFrame.EnsureRightClickPassThrough(frame)
 end
 
+-- 3.3.5a: a press on a world map icon also goes to a zoom addon moving the map with drags (BetterMaps-WotLK).
+---@param self IconFrame
+function _QuestieFrame.OnMouseDown(self, button)
+    self.mapDragged = nil
+    if not self.miniMapIcon then
+        self.mapPress = QuestieCompat335.WorldMapIconMouseDown(button)
+    end
+end
+
+---@param self IconFrame
+function _QuestieFrame.OnMouseUp(self)
+    if self.mapPress then
+        self.mapPress = nil
+        self.mapDragged = QuestieCompat335.WorldMapIconMouseUp()
+    end
+end
+
 ---@param self IconFrame
 function _QuestieFrame.OnClick(self, button)
     local uiMapId = self.UiMapID
 
+    if self.mapPress then
+        _QuestieFrame.OnMouseUp(self)
+    end
+    if self.mapDragged then
+        -- the press moved the map: no click on the icon
+        self.mapDragged = nil
+        return
+    end
+
     if button == "RightButton" then
         -- 3.3.5a: a right click on a world map icon zooms the map out, like a click on the map itself.
-        if (not self.miniMapIcon) and WorldMapFrame:IsShown() and WorldMapButton_OnClick then
-            WorldMapButton_OnClick(WorldMapButton, "RightButton")
+        if (not self.miniMapIcon) and WorldMapFrame:IsShown() then
+            QuestieCompat335.ClickWorldMap("RightButton")
         end
         return
     end

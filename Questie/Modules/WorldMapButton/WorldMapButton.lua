@@ -23,15 +23,31 @@ local mapButton
 
 local ICON = "Interface\\AddOns\\Questie\\Icons\\questie.tga"
 
+-- above Questie's map icons (HereBeDragons-Pins puts them at WORLDMAP_POI_FRAMELEVEL + 5 and up)
+local function _FrameLevel()
+    return (WORLDMAP_POI_FRAMELEVEL or 100) + 30
+end
+
+--- The top right corner of the map in view. A zoom addon (BetterMaps-WotLK, Magnify-WotLK, Leatrix Maps) puts the
+--- map into WorldMapScrollFrame and zooms the map itself, which would carry the button off with the zoom: the button
+--- goes on the scroll frame then, and stays in the corner of the window's map.
+---@param button Button
+local function _Place(button)
+    local parent = _G.WorldMapScrollFrame or _G.WorldMapButton -- the map frame; "WorldMapButton" is this module in here
+    if button:GetParent() ~= parent then
+        button:SetParent(parent)
+    end
+    button:ClearAllPoints()
+    button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -4, -4)
+    button:SetFrameLevel(_FrameLevel())
+end
+
 ---@return Button
 local function _CreateButton()
-    local parent = _G.WorldMapButton -- the map frame; "WorldMapButton" is this module in here
-    local button = CreateFrame("Button", "QuestieWorldMapButton", parent)
+    local button = CreateFrame("Button", "QuestieWorldMapButton", _G.WorldMapButton)
     button:SetWidth(32)
     button:SetHeight(32)
-    button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -4, -4)
-    -- above Questie's map icons (HereBeDragons-Pins puts them at WORLDMAP_POI_FRAMELEVEL + 5 and up)
-    button:SetFrameLevel((WORLDMAP_POI_FRAMELEVEL or 100) + 30)
+    _Place(button)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
     local background = button:CreateTexture(nil, "BACKGROUND")
@@ -66,9 +82,15 @@ local function _CreateButton()
     -- WorldMapFrame_ResetFrameLevels (map size changes) moves the map's frames; stay on top of them.
     if type(WorldMapFrame_ResetFrameLevels) == "function" then
         hooksecurefunc("WorldMapFrame_ResetFrameLevels", function()
-            button:SetFrameLevel((WORLDMAP_POI_FRAMELEVEL or 100) + 30)
+            button:SetFrameLevel(_FrameLevel())
         end)
     end
+    -- a zoom addon's scroll frame made after the button
+    WorldMapFrame:HookScript("OnShow", function()
+        if _G.WorldMapScrollFrame and button:GetParent() ~= _G.WorldMapScrollFrame then
+            _Place(button)
+        end
+    end)
     return button
 end
 

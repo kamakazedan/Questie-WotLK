@@ -404,8 +404,14 @@ function Renderer:Draw(view, runs, style)
         view = table.remove(self.freeViews)
         if not view then
             view = CreateFrame("Frame", nil, self.canvas)
-            view:SetPoint("TOPLEFT", self.canvas, "TOPLEFT")
-            view:SetSize(1, 1)
+            if LEGACY then
+                -- 3.3.5a: covering the canvas. A zoom addon (BetterMaps-WotLK) takes small frames on the map for
+                -- icons and shrinks them as it zooms in, which would pull the lines into the map's corner.
+                view:SetAllPoints(self.canvas)
+            else
+                view:SetPoint("TOPLEFT", self.canvas, "TOPLEFT")
+                view:SetSize(1, 1)
+            end
             for kind in pairs(KINDS) do view[kind] = {} end
         end
         view:Hide()

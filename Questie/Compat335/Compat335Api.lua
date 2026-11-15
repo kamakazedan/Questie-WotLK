@@ -598,6 +598,72 @@ function QuestieCompat335.GetWorldMapCanvas()
     return WorldMapButton
 end
 
+--- How many times bigger a zoom addon draws the map than the map would show without it: 1 without one.
+--- Zoom addons for this client (BetterMaps-WotLK, Magnify-WotLK, Leatrix Maps) put the map into a
+--- scroll frame, WorldMapScrollFrame, and scale the map inside it (WorldMapFrame.ScrollContainer:GetCanvasScale()).
+---@return number
+function QuestieCompat335.GetWorldMapZoom()
+    local scroll = _G.WorldMapScrollFrame
+    local canvas = WorldMapButton
+    if not (scroll and canvas and scroll.GetEffectiveScale) then
+        return 1
+    end
+    local parent = canvas:GetParent()
+    while parent and parent ~= scroll do
+        parent = parent:GetParent()
+    end
+    if not parent then
+        return 1
+    end
+    local zoom = canvas:GetEffectiveScale() / scroll:GetEffectiveScale()
+    if zoom > 0 and zoom < math.huge then
+        return zoom
+    end
+    return 1
+end
+
+--- Whether the map Questie draws on is in view. BetterMaps-WotLK draws dungeon maps of its own over the game's map
+--- and makes the game's map invisible meanwhile, with all that is drawn on it.
+---@return boolean
+function QuestieCompat335.IsWorldMapCanvasShown()
+    return WorldMapButton:GetAlpha() > 0
+end
+
+--- A click handed on to the map by something drawn on it, as a click on the map itself: through the map's own
+--- mouse-up script, which zoom addons replace (BetterMaps-WotLK leaves its dungeon maps on a right click).
+---@param mouseButton string
+function QuestieCompat335.ClickWorldMap(mouseButton)
+    local onMouseUp = WorldMapButton:GetScript("OnMouseUp")
+    if onMouseUp then
+        onMouseUp(WorldMapButton, mouseButton)
+    elseif WorldMapButton_OnClick then
+        WorldMapButton_OnClick(WorldMapButton, mouseButton)
+    end
+end
+
+--- BetterMaps-WotLK moves a zoomed map with a drag. A press on one of Questie's map icons is handed to it, so a drag
+--- that starts on an icon still moves the map; a press that does not move the map stays a click on the icon.
+---@param mouseButton string
+---@return boolean handed The press went to the map
+function QuestieCompat335.WorldMapIconMouseDown(mouseButton)
+    local api = _G.BetterMapsWotLK
+    if type(api) == "table" and type(api.IconMouseDown) == "function" then
+        api.IconMouseDown(mouseButton)
+        return true
+    end
+    return false
+end
+
+--- The end of a press handed to the map by WorldMapIconMouseDown.
+---@return boolean dragged The press moved the map, so it is no click on the icon
+function QuestieCompat335.WorldMapIconMouseUp()
+    local api = _G.BetterMapsWotLK
+    if type(api) == "table" and type(api.IconMouseUp) == "function" then
+        return api.IconMouseUp() and true or false
+    end
+    return false
+end
+
 --- Cursor position on the map, 0-1 (WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition()).
 ---@return number x
 ---@return number y

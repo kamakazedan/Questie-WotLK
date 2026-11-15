@@ -58,6 +58,14 @@ local function GetMiniWorldMapTitleText()
     end
 end
 
+-- BetterMaps-WotLK shows the cursor's and the player's coordinates on the map itself while its coordinates are on
+-- (/bmaps coords): the map's title is left alone then.
+---@return boolean
+local function _MapShowsCoordinates()
+    local frame = _G.BetterMapsCoords
+    return frame ~= nil and frame:IsShown() and true or false
+end
+
 function QuestieCoords:WriteCoords()
     if not ((Questie.db.profile.mapCoordinatesEnabled and WorldMapFrame:IsVisible()) or (Questie.db.profile.minimapCoordinatesEnabled and Minimap:IsVisible())) then
         return -- no need to write coords
@@ -87,7 +95,13 @@ function QuestieCoords:WriteCoords()
     end
     -- if main map
     local mapTitleText, setter = GetMapTitleText()
-    if Questie.db.profile.mapCoordinatesEnabled and WorldMapFrame:IsVisible() and mapTitleText then
+    if Questie.db.profile.mapCoordinatesEnabled and WorldMapFrame:IsVisible() and mapTitleText and _MapShowsCoordinates() then
+        if QuestieCoords._mapTitleWritten then
+            QuestieCoords._mapTitleWritten = nil
+            QuestieCoords:ResetMapText()
+        end
+    elseif Questie.db.profile.mapCoordinatesEnabled and WorldMapFrame:IsVisible() and mapTitleText then
+        QuestieCoords._mapTitleWritten = true
         -- get cursor position
         local curX, curY = GetCursorPosition();
 

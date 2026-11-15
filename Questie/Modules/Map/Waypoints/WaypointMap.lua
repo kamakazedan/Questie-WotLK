@@ -17,7 +17,7 @@ local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
 -- Below Questie's icons, which start at 2016 (QuestieMap.utils.SetDrawOrder).
 local FRAME_LEVEL = 2015
 
--- 3.3.5a: the map is drawn on WorldMapButton, without zooming (no ScrollContainer). Questie's icons
+-- 3.3.5a: the map is drawn on WorldMapButton (no ScrollContainer), zoomed only by a zoom addon. Questie's icons
 -- sit on a canvas at WORLDMAP_POI_FRAMELEVEL + 5 (HereBeDragons-Pins), so paths go just below it.
 local LEGACY = QuestieCompat335.isLegacyClient
 if LEGACY then
@@ -40,7 +40,7 @@ end
 
 local function _GetCanvasScale()
     if LEGACY then
-        return 1
+        return QuestieCompat335.GetWorldMapZoom()
     end
     return WorldMapFrame.ScrollContainer:GetCanvasScale()
 end
@@ -159,7 +159,8 @@ end
 -- Blizzard's pins and other UI on top win.
 local function _IsCursorOnMap()
     if LEGACY then
-        return QuestieCompat.GetMouseFocus() == WorldMapButton
+        -- not while BetterMaps-WotLK shows a dungeon map of its own over it
+        return QuestieCompat.GetMouseFocus() == WorldMapButton and QuestieCompat335.IsWorldMapCanvasShown()
     end
     return QuestieCompat.GetMouseFocus() == WorldMapFrame.ScrollContainer
 end
