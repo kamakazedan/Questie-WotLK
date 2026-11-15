@@ -1,3 +1,5 @@
+-- 3.3.5a: UnitClassBase returns the localized class name first there (Compat335/Compat335.lua)
+local UnitClassBase = QuestieCompat335.UnitClassBase
 ---@type QuestieJourney
 local QuestieJourney = QuestieLoader:CreateModule("QuestieJourney")
 local _QuestieJourney = QuestieJourney.private

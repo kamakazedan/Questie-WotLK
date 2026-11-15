@@ -406,6 +406,14 @@ function QuestieCompat335.UnitClass(unit)
     return className, classFile, classID or (classFile and CLASS_IDS[classFile])
 end
 
+--- UnitClassBase of later clients: the class file name ("PALADIN") and the class ID.
+--- On 3.3.5a, UnitClassBase returns the localized class name and the file name instead.
+---@return string? classFile, number? classID
+function QuestieCompat335.UnitClassBase(unit)
+    local _, classFile, classID = QuestieCompat335.UnitClass(unit)
+    return classFile, classID
+end
+
 -------------------------------------------------------------------------------------------------
 -- Groups
 -------------------------------------------------------------------------------------------------
