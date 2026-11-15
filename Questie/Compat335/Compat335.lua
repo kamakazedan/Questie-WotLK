@@ -415,6 +415,22 @@ function QuestieCompat335.UnitClassBase(unit)
 end
 
 -------------------------------------------------------------------------------------------------
+-- Achievements
+-------------------------------------------------------------------------------------------------
+
+--- True when the player earned the achievement. Later clients report this as GetAchievementInfo's 13th
+--- return (wasEarnedByMe); 3.3.5a returns 11 values, and as its achievements are per character the 4th
+--- (completed) means the same there.
+---@param achievementID number
+---@return boolean
+function QuestieCompat335.IsAchievementEarnedByMe(achievementID)
+    if QuestieCompat335.isLegacyClient then
+        return select(4, GetAchievementInfo(achievementID)) and true or false
+    end
+    return select(13, GetAchievementInfo(achievementID)) and true or false
+end
+
+-------------------------------------------------------------------------------------------------
 -- Groups
 -------------------------------------------------------------------------------------------------
 

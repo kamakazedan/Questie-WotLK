@@ -2089,7 +2089,7 @@ function _QuestieDB:CheckAchievementRequirements(questId)
     -- https://www.wowhead.com/wotlk/achievement=2817/exalted-argent-champion-of-the-alliance
     -- https://www.wowhead.com/wotlk/achievement=2816/exalted-argent-champion-of-the-horde
     if questId == 14101 or questId == 14102 or questId == 14104 or questId == 14105 or questId == 14107 or questId == 14108 then
-        if select(13, GetAchievementInfo(2817)) or select(13, GetAchievementInfo(2816)) then
+        if QuestieCompat335.IsAchievementEarnedByMe(2817) or QuestieCompat335.IsAchievementEarnedByMe(2816) then
             return true
         end
 
@@ -2097,47 +2097,47 @@ function _QuestieDB:CheckAchievementRequirements(questId)
     end
 
     if questsRequiringNewbieAchievement[questId] then
-        return select(13, GetAchievementInfo(7433)) -- Newbie
+        return QuestieCompat335.IsAchievementEarnedByMe(7433) -- Newbie
     end
 
     if questsRequiringTamingKalimdorAchievement[questId] then
-        return select(13, GetAchievementInfo(6602)) -- Taming Kalimdor
+        return QuestieCompat335.IsAchievementEarnedByMe(6602) -- Taming Kalimdor
     end
 
     if questsRequiringTamingEasternKingdomsAchievement[questId] then
-        return select(13, GetAchievementInfo(6603)) -- Taming Eastern Kingdoms
+        return QuestieCompat335.IsAchievementEarnedByMe(6603) -- Taming Eastern Kingdoms
     end
 
     if questsRequiringTamingOutlandAchievement[questId] then
-        return select(13, GetAchievementInfo(6604)) -- Taming Outland
+        return QuestieCompat335.IsAchievementEarnedByMe(6604) -- Taming Outland
     end
 
     if questsRequiringTamingNorthrendAchievement[questId] then
-        return select(13, GetAchievementInfo(6605)) -- Taming Northrend
+        return QuestieCompat335.IsAchievementEarnedByMe(6605) -- Taming Northrend
     end
 
     if questsRequiringTamingCataclysmAchievement[questId] then
-        return select(13, GetAchievementInfo(7525)) -- Taming Cataclysm
+        return QuestieCompat335.IsAchievementEarnedByMe(7525) -- Taming Cataclysm
     end
 
     if questsRequiringTamingPandariaAchievement[questId] then
-        return select(13, GetAchievementInfo(6606)) -- Taming Pandaria
+        return QuestieCompat335.IsAchievementEarnedByMe(6606) -- Taming Pandaria
     end
 
     if questsRequiringPandarenSpiritTamerAchievement[questId] then
-        return select(13, GetAchievementInfo(7936)) -- Pandaren Spirit Tamer
+        return QuestieCompat335.IsAchievementEarnedByMe(7936) -- Pandaren Spirit Tamer
     end
 
     if questsRequiringFabledPandarenTamerAchievement[questId] then
-        return select(13, GetAchievementInfo(8080)) -- Beasts of Fable
+        return QuestieCompat335.IsAchievementEarnedByMe(8080) -- Beasts of Fable
     end
 
     if questsRequiringFriendsOnTheFarmAchievement[questId] then
-        return select(13, GetAchievementInfo(6552)) -- Friends On The Farm
+        return QuestieCompat335.IsAchievementEarnedByMe(6552) -- Friends On The Farm
     end
 
     if questsRequiringAllGrownsUpAchievement[questId] then
-        return select(13, GetAchievementInfo(6570)) -- All Growns Up!
+        return QuestieCompat335.IsAchievementEarnedByMe(6570) -- All Growns Up!
     end
 end
 

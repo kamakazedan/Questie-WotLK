@@ -102,7 +102,10 @@ function TrackerAchievements.GetAchievements(achievementIds)
     local achievements = {}
 
     for _, trackedId in ipairs(achievementIds) do
-        local achievementId, name, _, _, _, _, _, description, _, _, _, _, completed = GetAchievementInfo(trackedId)
+        local achievementId, name, _, completedByCharacter, _, _, _, description, _, _, _, _, completed = GetAchievementInfo(trackedId)
+        if QuestieCompat335.isLegacyClient then
+            completed = completedByCharacter -- 3.3.5a: 11 returns, achievements are per character
+        end
         if achievementId and (not completed) then
             achievements[#achievements + 1] = {
                 Id = achievementId,
