@@ -67,12 +67,10 @@ function QuestieOptions:Initialize()
         openButton:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
         openButton:SetText(l10n("Open Questie options"))
         openButton:SetScript("OnClick", function()
-            if InterfaceOptionsFrame then
-                HideUIPanel(InterfaceOptionsFrame)
-            end
-            if GameMenuFrame then
-                HideUIPanel(GameMenuFrame)
-            end
+            -- Only Questie's own window, which opens above the game's. Closing the Interface Options or the game
+            -- menu from here would run the game's window management as Questie's code, and it would carry that
+            -- taint until the next reload: the spellbook and other windows could then be blocked from opening in
+            -- combat ("Interface action failed because of an AddOn").
             if QuestieConfigFrame and not QuestieConfigFrame:IsShown() then
                 QuestieOptions:ToggleConfigWindow()
             end

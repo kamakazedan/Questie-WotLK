@@ -53,6 +53,13 @@ Working on 3.3.5a:
   QuestHelper's tracker and the game's own tracker list. Turning it back on moves them into Questie's list again.
   The setting is shared by your characters, so each other character gets its quests back at its next login,
   if its watch list is still empty.
+- **"Interface action failed because of an AddOn":** with Questie's tracker off, the game's quest log, quest
+  tracker and window management run as the game's own code: Questie doesn't replace the quest log's click
+  handler, and its button in the Interface Options doesn't close the game's windows itself. While Questie's
+  tracker is on, it answers the quest log's question of which quests are tracked (the game's watch list is empty
+  then), so the quest log's updates run partly as Questie's code. If the message appears, type
+  `/console taintLog 1`, wait for it to appear again, quit the game, and the file `Logs\taint.log` in the game's
+  folder names the addon and the action that was blocked (`/console taintLog 0` turns the log off again).
 - **Addons that add newer-client functions as globals** (CompactRaidFrame's `WotLKCompat.lua`, for example)
   don't change what Questie does: Questie checks the client itself rather than those globals.
 - **Addons built on the Ace3 libraries of 3.3.5a** (AtlasLoot, CompactRaidFrame's AbsorbsMonitor, CleanMinimap,
@@ -79,7 +86,10 @@ them, but some things work differently:
 - **Reputation requirements** are looked up by English faction names. On a client in another
   language, quests that need a certain reputation may be shown or hidden incorrectly.
 - Map icons are not hidden in map areas you have not explored yet, so that option is not offered.
-- Options are in the Ace3 options window rather than in the newer Blizzard settings panel.
+- Options are in the Ace3 options window rather than in the newer Blizzard settings panel. The Questie entry in
+  the game's Interface Options has a button that opens that window on top; the game's window stays open behind it.
+- **Quest links from the quest log:** shift-clicking a quest in the quest log with the chat box open inserts the
+  game's own quest link, which players without Questie can click too, rather than Questie's `[Title (ID)]` text.
 - Race sound choices for races added after Wrath (Goblin, Worgen, Pandaren) play nothing.
 
 ## Testing status

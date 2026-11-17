@@ -16,6 +16,15 @@ function Hooks:HookQuestLogTitle()
     if not QuestLogTitleButton_OnClick then
         return
     end
+    -- 3.3.5a: the game's own handler already does what this pre-hook adds. Shift-click with the chat box open inserts
+    -- the quest's link (GetQuestLink), and shift-click toggles the watch without refusing quests that have no
+    -- objectives; Questie's tracker picks the toggle up through its AddQuestWatch/RemoveQuestWatch hooks. Replacing
+    -- the handler would run every click in the quest log as Questie's code, and the quest log, the game's tracker
+    -- and the windows they open would carry that taint for the session ("Interface action failed because of an
+    -- AddOn" when one of them later does something protected).
+    if QuestieCompat335 and QuestieCompat335.isLegacyClient then
+        return
+    end
 
     Questie.Debug(Questie.DEBUG_DEVELOP, "[Hooks] Hooking Quest Log Title")
     local baseQLTB_OnClick = QuestLogTitleButton_OnClick
