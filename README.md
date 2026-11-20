@@ -79,7 +79,12 @@ them, but some things work differently:
   to, only its name, so another NPC with the same name as a quest target gets the icon too. The icon on
   the target frame is exact.
 - **Turned-in quests are recognized by title and NPC**, as the client does not report quest IDs when a
-  quest is turned in. Two quests with the same title from the same NPC could be mixed up.
+  quest is turned in. Two quests with the same title from the same NPC could be mixed up. The game's
+  "<quest> completed." message counts as a turn-in as well, so a quest an auto turn-in addon hands in is not
+  taken for an abandoned one.
+- **Quest log changes are read at every quest log update.** Questie rescans the quest log only within 20 seconds
+  of an objective event. On 3.3.5a it also compares what the quest log shows at every quest log update, so a
+  quest that completes with no such event shortly before still swaps its objective icons for the turn-in icon.
 - **Waypoint lines** (NPC patrol paths) are drawn on the world map but not on the minimap.
 - **Party sharing** uses Questie's older message format. The newer compressed messages and the "yell"
   broadcasts to nearby players are off.

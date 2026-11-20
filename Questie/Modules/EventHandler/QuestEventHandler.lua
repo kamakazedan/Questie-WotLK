@@ -69,6 +69,44 @@ local deletedQuestItem = false
 -- The timestamp only gates event-driven scans; it cannot recover missing data if Blizzard stops sending events.
 local lastMarkerQuestEventTime = 0
 local MARKER_EVENT_TIMEFRAME = 20 -- seconds
+
+-- 3.3.5a: nothing makes sure a marker event came shortly before the QUEST_LOG_UPDATE that brings a change. A quest
+-- completed with no marker in the last MARKER_EVENT_TIMEFRAME kept its objective icons and got no turn-in icon. So
+-- what the quest log shows is read at every QUEST_LOG_UPDATE, and a change runs the scan a marker would have allowed.
+local isLegacyClient = QuestieCompat335 and QuestieCompat335.isLegacyClient
+local MAX_QUEST_LOG_INDEX = 75
+local lastQuestLogReading
+local questLogReading = {}
+
+--- 3.3.5a: whether the quest log reads differently than at the last call: its quests, their completion and objectives.
+---@return boolean
+local function _QuestLogReadsDifferently()
+    local parts, n = questLogReading, 0
+    for index = 1, MAX_QUEST_LOG_INDEX do
+        local title, _, _, _, isHeader, _, isComplete, _, questId = GetQuestLogTitle(index)
+        if not title then
+            break
+        end
+        if not isHeader then
+            parts[n + 1] = questId or title
+            parts[n + 2] = isComplete or 0
+            n = n + 2
+            for objective = 1, GetNumQuestLeaderBoards(index) or 0 do
+                local text, _, finished = GetQuestLogLeaderBoard(objective, index)
+                parts[n + 1] = text or ""
+                parts[n + 2] = finished and 1 or 0
+                n = n + 2
+            end
+        end
+    end
+    local reading = table.concat(parts, "\031", 1, n)
+    for i = #parts, n + 1, -1 do
+        parts[i] = nil
+    end
+    local changed = reading ~= lastQuestLogReading
+    lastQuestLogReading = reading
+    return changed
+end
 local questLogRetryTimer
 -- The fallback doubles its delay each time it fires without resolving loading, so a quest that never
 -- loads costs one scan every few minutes instead of every 20s for the whole session.
@@ -493,7 +531,9 @@ function QuestEventHandler.QuestLogUpdate()
     end
 
     local now = GetTime()
-    if lastMarkerQuestEventTime > 0 and (now - lastMarkerQuestEventTime) > MARKER_EVENT_TIMEFRAME then
+    -- Read at every update, so the reading is current when the next one compares with it
+    local logChanged = isLegacyClient and _QuestLogReadsDifferently()
+    if lastMarkerQuestEventTime > 0 and (now - lastMarkerQuestEventTime) > MARKER_EVENT_TIMEFRAME and not logChanged then
         Questie.Debug(Questie.DEBUG_DEVELOP, "[Quest Event] QUEST_LOG_UPDATE - No recent marker; skipping objective scan")
     else
         _QuestEventHandler:UpdateAllQuests(true)

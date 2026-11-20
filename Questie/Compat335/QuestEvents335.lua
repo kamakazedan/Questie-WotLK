@@ -9,6 +9,10 @@
 --   * abandon:  SetAbandonQuest()/AbandonQuest(); removed once it has left the quest log.
 --   * anything else that leaves the log is reported as removed, which Questie then treats as
 --     abandoned unless the quest is flagged completed.
+--   * the game's "<quest> completed." message (ERR_QUEST_COMPLETE_S) counts as a turn-in too, for turn-ins
+--     that did not go through the hooked GetQuestReward: an addon calling the copy it kept before Questie
+--     loaded, for example. If the quest already left the log and was reported as removed, it is reported
+--     as turned in, which stops it from being taken as abandoned.
 --
 -- Quests under a collapsed quest log header are listed after the shown entries (see Compat335Api.lua), so a
 -- walk to the first absent title sees them all. As a safeguard, a quest only counts as gone when the number
@@ -26,9 +30,12 @@ local QuestEventHandler = QuestieLoader:ImportModule("QuestEventHandler")
 
 local MAX_QUEST_LOG_INDEX = 75
 local PENDING_TIMEOUT = 15 -- seconds a turn-in or abandon may take to reach the quest log
+local COMPLETED_MESSAGE_WINDOW = 10 -- seconds the "<quest> completed." message may come after the quest left the log
 
 local started = false
 local knownQuests = {}      -- [questID] = true: quests seen in the log
+local knownTitles = {}      -- [questID] = title, for those and for the ones in recentlyRemoved
+local recentlyRemoved = {}  -- [questID] = time it left the log, reported as removed
 local lastNumQuests         -- quests in the log (hidden ones included) at the last scan
 local pendingTurnIns = {}   -- [questID] = {time, xp, money}
 local pendingAbandons = {}  -- [questID] = time
@@ -37,9 +44,13 @@ local abandonQuestID        -- quest marked with SetAbandonQuest
 
 local frame = CreateFrame("Frame")
 
---- Quests the quest log lists (those under collapsed headers included): [questID] = index, and how many.
+-- "%s completed." as a pattern that captures the quest's title
+local completedPattern = "^" .. string.gsub(ERR_QUEST_COMPLETE_S or "%s completed.", "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0"):gsub("%%%%s", "(.+)") .. "$"
+
+--- Quests the quest log lists (those under collapsed headers included): [questID] = index, how many, and
+--- [questID] = title.
 local function _ShownQuests()
-    local shown, count = {}, 0
+    local shown, count, titles = {}, 0, {}
     for index = 1, MAX_QUEST_LOG_INDEX do
         local title, _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(index)
         if not title then
@@ -47,10 +58,11 @@ local function _ShownQuests()
         end
         if (not isHeader) and questID and questID > 0 then
             shown[questID] = index
+            titles[questID] = title
             count = count + 1
         end
     end
-    return shown, count
+    return shown, count, titles
 end
 
 --- Calls func(questID[, xp, money]); an error goes to the error handler from where it happened (see Compat335.lua).
@@ -62,6 +74,8 @@ end
 
 local function _TurnedIn(questID, info)
     knownQuests[questID] = nil
+    knownTitles[questID] = nil
+    recentlyRemoved[questID] = nil
     QuestieCompat335.MarkQuestCompleted(questID)
     _Dispatch(QuestEventHandler.QuestTurnedIn, questID, info and info.xp or 0, info and info.money or 0)
     _Dispatch(QuestEventHandler.QuestRemoved, questID)
@@ -69,7 +83,46 @@ end
 
 local function _Removed(questID)
     knownQuests[questID] = nil
+    recentlyRemoved[questID] = GetTime()
     _Dispatch(QuestEventHandler.QuestRemoved, questID)
+end
+
+--- The game's "<title> completed." message: that quest was turned in.
+---@param title string
+local function _CompletedMessage(title)
+    local now = GetTime()
+    local inLog, gone
+    for questID, questTitle in pairs(knownTitles) do
+        if questTitle == title then
+            if knownQuests[questID] then
+                if inLog then
+                    return -- two quests of that title: which one is not known
+                end
+                inLog = questID
+            elseif recentlyRemoved[questID] and now - recentlyRemoved[questID] <= COMPLETED_MESSAGE_WINDOW then
+                if gone then
+                    return
+                end
+                gone = questID
+            end
+        end
+    end
+    if inLog and gone then
+        return
+    end
+    if inLog then
+        -- Reported by the scan once it has left the log, like a turn-in seen through GetQuestReward
+        if not pendingTurnIns[inLog] then
+            pendingTurnIns[inLog] = {time = now, xp = 0, money = 0}
+        end
+        pendingAbandons[inLog] = nil
+    elseif gone then
+        -- Already reported as removed: QuestEventHandler waits a moment before it takes that as an abandon
+        recentlyRemoved[gone] = nil
+        knownTitles[gone] = nil
+        QuestieCompat335.MarkQuestCompleted(gone)
+        _Dispatch(QuestEventHandler.QuestTurnedIn, gone, 0, 0)
+    end
 end
 
 local inLoadingScreen = false
@@ -84,7 +137,7 @@ local function _Scan()
     if numQuests == 0 and lastNumQuests and lastNumQuests > 1 and not (next(pendingTurnIns) or next(pendingAbandons)) then
         return -- an empty answer while the log had quests: not loaded yet
     end
-    local shown, shownCount = _ShownQuests()
+    local shown, shownCount, titles = _ShownQuests()
     local fullyShown = shownCount == numQuests
     local removedCount = lastNumQuests and (lastNumQuests - numQuests) or 0
     local now = GetTime()
@@ -138,6 +191,15 @@ local function _Scan()
 
     for questID in pairs(shown) do
         knownQuests[questID] = true
+        knownTitles[questID] = titles[questID]
+    end
+    for questID, time in pairs(recentlyRemoved) do
+        if now - time > COMPLETED_MESSAGE_WINDOW then
+            recentlyRemoved[questID] = nil
+            if not knownQuests[questID] then
+                knownTitles[questID] = nil
+            end
+        end
     end
     lastNumQuests = numQuests
 end
@@ -155,6 +217,7 @@ function QuestieCompat335.GetAcceptedQuestID(questLogIndex)
     end
     if questID then
         knownQuests[questID] = true
+        knownTitles[questID] = (GetQuestLogTitle(questLogIndex))
         lastNumQuests = QuestieCompat335.GetNumQuests()
     end
     return questID
@@ -164,11 +227,16 @@ end
 -- Hooks
 -------------------------------------------------------------------------------------------------
 
-frame:SetScript("OnEvent", function(_, event)
+frame:SetScript("OnEvent", function(_, event, message)
     if not started then
         return
     end
-    if event == "QUEST_COMPLETE" then
+    if event == "CHAT_MSG_SYSTEM" then
+        local title = type(message) == "string" and message:match(completedPattern)
+        if title then
+            _CompletedMessage(title)
+        end
+    elseif event == "QUEST_COMPLETE" then
         rewardQuestID = QuestieCompat335.GetQuestID()
     elseif event == "QUEST_FINISHED" then
         -- The quest frame closed; a turn-in reaches the quest log right after this.
@@ -239,9 +307,10 @@ function QuestieCompat335.StartQuestEvents()
         return
     end
     started = true
-    local shown = _ShownQuests()
+    local shown, _, titles = _ShownQuests()
     for questID in pairs(shown) do
         knownQuests[questID] = true
+        knownTitles[questID] = titles[questID]
     end
     lastNumQuests = QuestieCompat335.GetNumQuests()
     frame:RegisterEvent("QUEST_LOG_UPDATE")
@@ -249,4 +318,5 @@ function QuestieCompat335.StartQuestEvents()
     frame:RegisterEvent("QUEST_FINISHED")
     frame:RegisterEvent("PLAYER_LEAVING_WORLD")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("CHAT_MSG_SYSTEM")
 end
