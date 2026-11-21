@@ -334,6 +334,36 @@ hooksecurefunc(WorldMapButton, "SetAlpha", function()
     end
 end)
 
+-- Questie modification (3.3.5a): a zoom addon's view can take in more than the map. BetterMaps-WotLK's free camera shows
+-- the land round a zone's map, so pins of the zones round it on the same continent are placed past the map's edges as
+-- well, within reach of the view: the view and as much again on each side, so a drag or a step of the wheel out shows
+-- them at once. Once the view goes past the reach, the pins are placed again for a reach round the view as it is then.
+local REACH_MARGIN = 1
+local ON_MAP_SLACK = 0.001 -- a view this little past the map's edges is still on the map
+local reach -- {left, top, right, bottom} on the map shown, 0-1 across and down the map; nil: only the map itself
+
+--- The reach round a zoom addon's view of the map, or nil while the view is on the map itself (or there is no zoom addon).
+---@return table?
+local function ViewReach()
+    local left, top, right, bottom = QuestieCompat335.GetWorldMapView()
+    if not left or (left >= -ON_MAP_SLACK and top >= -ON_MAP_SLACK and right <= 1 + ON_MAP_SLACK and bottom <= 1 + ON_MAP_SLACK) then
+        return nil
+    end
+    local width, height = (right - left) * REACH_MARGIN, (bottom - top) * REACH_MARGIN
+    return {left - width, top - height, right + width, bottom + height}
+end
+
+--- The reach the pins were placed for, on the map shown; nil while only pins on the map itself are placed. A new table
+--- each time the pins are placed for a reach, so Questie's paths can tell when to be drawn again.
+---@return table? reach {left, top, right, bottom}, 0-1 across and down the map shown
+function pins.GetWorldMapReach()
+    return reach
+end
+
+local function InReach(x, y)
+    return reach ~= nil and x >= reach[1] and x <= reach[3] and y >= reach[2] and y <= reach[4]
+end
+
 local activePins = {} -- pin frame -> true
 local freePins = {}
 
@@ -429,6 +459,7 @@ function worldmapProvider:RefreshAllData()
     local mapId = map:GetMapID()
     if(lastUiMapId ~= mapId or worldmapProvider.forceUpdate) then
         self:RemoveAllData()
+        reach = WorldMapFrame:IsShown() and ViewReach() or nil -- Questie modification (3.3.5a)
         if WorldMapFrame:IsShown() then
             for icon, data in pairs(worldmapPins) do
                 self:HandlePin(icon, data)
@@ -514,8 +545,11 @@ function worldmapProvider:HandlePin(icon, data)
             -- on its own map the pin keeps the coordinates it was added with
             x, y = data.zoneX, data.zoneY
         else
-            -- translate coordinates
-            x, y = HBD:GetZoneCoordinatesFromWorldInstance(data.x, data.y, data.instanceID, uiMapID)
+            -- translate coordinates: onto the map, or past its edges within reach of a zoom addon's view
+            x, y = HBD:GetZoneCoordinatesFromWorldInstance(data.x, data.y, data.instanceID, uiMapID, reach ~= nil)
+            if x and (x < 0 or x > 1 or y < 0 or y > 1) and not InReach(x, y) then
+                return
+            end
         end
     end
     if x and y then
@@ -574,6 +608,35 @@ WorldMapFrame:HookScript("OnHide", function()
     worldmapProvider:RemoveAllData()
     currentMapID = nil
     lastUiMapId = -1
+    reach = nil
+end)
+
+-- Questie modification (3.3.5a): the view gone past the reach (dragged, or zoomed out), or past the map's edges where
+-- only the map itself had pins: the pins are placed again, for the view as it is now. Looked at a few times a second
+-- while the map is open.
+local REACH_CHECK_SECONDS = 0.2
+local sinceReachCheck = 0
+local reachWatcher = CreateFrame("Frame", nil, WorldMapFrame)
+reachWatcher:SetScript("OnUpdate", function(_, elapsed)
+    sinceReachCheck = sinceReachCheck + elapsed
+    if sinceReachCheck < REACH_CHECK_SECONDS or currentMapID == nil then
+        return
+    end
+    sinceReachCheck = 0
+    local left, top, right, bottom = QuestieCompat335.GetWorldMapView()
+    if not left then
+        return
+    end
+    local past
+    if reach then
+        past = left < reach[1] or top < reach[2] or right > reach[3] or bottom > reach[4]
+    else
+        past = left < -ON_MAP_SLACK or top < -ON_MAP_SLACK or right > 1 + ON_MAP_SLACK or bottom > 1 + ON_MAP_SLACK
+    end
+    if past then
+        worldmapProvider.forceUpdate = true
+        UpdateWorldMap(true)
+    end
 end)
 
 -- The map changes size (full screen, quest list, windowed); icons are rescaled for the new size.

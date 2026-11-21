@@ -617,6 +617,39 @@ function QuestieCompat335.GetWorldMapZoom()
     return 1
 end
 
+--- The part of the map in view in a zoom addon's scroll frame: 0-1 across and down the map, and past that where the
+--- view goes past the map's edges (BetterMaps-WotLK's free camera shows the land round a zone's map). Nil without a
+--- zoom addon, where the whole map shows and nothing past it.
+---@return number? left
+---@return number? top
+---@return number? right
+---@return number? bottom
+function QuestieCompat335.GetWorldMapView()
+    local scroll = _G.WorldMapScrollFrame
+    local canvas = WorldMapButton
+    if not (scroll and canvas and scroll.GetEffectiveScale) then
+        return nil
+    end
+    local parent = canvas:GetParent()
+    while parent and parent ~= scroll do
+        parent = parent:GetParent()
+    end
+    if not parent then
+        return nil
+    end
+    local canvasScale, scrollScale = canvas:GetEffectiveScale(), scroll:GetEffectiveScale()
+    local canvasLeft, canvasTop, width, height = canvas:GetLeft(), canvas:GetTop(), canvas:GetWidth(), canvas:GetHeight()
+    local left, top, right, bottom = scroll:GetLeft(), scroll:GetTop(), scroll:GetRight(), scroll:GetBottom()
+    if not (canvasLeft and canvasTop and width and height and left and top and right and bottom)
+            or not (canvasScale > 0 and scrollScale > 0 and width > 0 and height > 0) then
+        return nil
+    end
+    width, height = width * canvasScale, height * canvasScale
+    canvasLeft, canvasTop = canvasLeft * canvasScale, canvasTop * canvasScale
+    return (left * scrollScale - canvasLeft) / width, (canvasTop - top * scrollScale) / height,
+        (right * scrollScale - canvasLeft) / width, (canvasTop - bottom * scrollScale) / height
+end
+
 --- Whether the map Questie draws on is in view. BetterMaps-WotLK draws dungeon maps of its own over the game's map
 --- and makes the game's map invisible meanwhile, with all that is drawn on it.
 ---@return boolean

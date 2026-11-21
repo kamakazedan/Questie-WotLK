@@ -13,6 +13,10 @@ local WaypointRenderer = QuestieLoader:ImportModule("WaypointRenderer")
 local WaypointHover = QuestieLoader:ImportModule("WaypointHover")
 ---@type QuestieCompat
 local QuestieCompat = QuestieLoader:ImportModule("QuestieCompat")
+---@type HBD
+local HBD = QuestieLoader:ImportModule("HBD")
+---@type HBDPins
+local HBDPins = QuestieLoader:ImportModule("HBDPins")
 
 -- Below Questie's icons, which start at 2016 (QuestieMap.utils.SetDrawOrder).
 local FRAME_LEVEL = 2015
@@ -65,8 +69,8 @@ local visible = {}
 -- Paths, their visibility or their highlight changed since the last draw.
 local dirty = true
 -- The map and canvas size drawn for. shownScale is the canvas scale line widths are drawn for;
--- currentScale the latest one.
-local shownMapId, shownWidth, shownHeight, shownScale, currentScale
+-- currentScale the latest one. shownReach: the reach round a zoom addon's view drawn for (3.3.5a).
+local shownMapId, shownWidth, shownHeight, shownScale, currentScale, shownReach
 -- Cursor at the last hover check, in canvas units; nil off the canvas.
 local cursorX, cursorY
 
@@ -83,15 +87,55 @@ local function _Style(path, alpha)
         frameLevel = FRAME_LEVEL, hoverRadius = profile.waypointDebugHover and WaypointHover.Radius() / shownScale or nil}
 end
 
----Paths draw on their own map only. Several icons can own the same patrol, such as an NPC who
----starts three quests: each copy would draw the route again, darker where they stack. A route draws
----once, as its highlighted copy, or else its most visible one.
+---3.3.5a: whether a path of another zone draws on the shown zone's map, past its edges. A zoom addon's view can take in
+---the land round a zone's map (BetterMaps-WotLK's free camera), and Questie's icons of the zones round it show there,
+---within reach of the view (HereBeDragons-Pins): their paths do as well, those of zones on the same continent that
+---come within that reach.
+---@param path WaypointPath
+---@return boolean
+local function _ShowsPastEdges(path)
+    local reach = LEGACY and HBDPins.GetWorldMapReach() or nil
+    local shown, own = HBD.mapData[shownMapId], HBD.mapData[path.uiMapId]
+    if not (reach and shown and own and shown.mapType == HBD.MapType.Zone and own.mapType == HBD.MapType.Zone) then
+        return false
+    end
+    local bounds = path.worldBounds
+    local x1, y1 = HBD:GetZoneCoordinatesFromWorldInstance(bounds[1], bounds[2], path.instanceId, shownMapId, true)
+    local x2, y2 = HBD:GetZoneCoordinatesFromWorldInstance(bounds[3], bounds[4], path.instanceId, shownMapId, true)
+    if not (x1 and x2) then return false end
+    return math.max(x1, x2) >= reach[1] and math.min(x1, x2) <= reach[3]
+        and math.max(y1, y2) >= reach[2] and math.min(y1, y2) <= reach[4]
+end
+
+---A path's points on the shown map, in canvas units: on its own map from its percentages, past the edges of
+---another zone's map from its world yards.
+---@param path WaypointPath
+---@return table[]
+local function _CanvasPoints(path)
+    local canvasPoints = {}
+    if path.uiMapId == shownMapId then
+        for i, point in ipairs(path.points) do
+            canvasPoints[i] = {x = point.x * shownWidth / 100, y = point.y * shownHeight / 100}
+        end
+    else
+        for i, point in ipairs(path.world) do
+            local x, y = HBD:GetZoneCoordinatesFromWorldInstance(point.x, point.y, path.instanceId, shownMapId, true)
+            canvasPoints[i] = {x = x * shownWidth, y = y * shownHeight}
+        end
+    end
+    return canvasPoints
+end
+
+---Paths draw on their own map, and on 3.3.5a past the edges of a zone's map round theirs where a zoom addon
+---shows that land. Several icons can own the same patrol, such as an NPC who starts three quests: each copy
+---would draw the route again, darker where they stack. A route draws once, as its highlighted copy, or else
+---its most visible one.
 ---@return table<string, {path: WaypointPath, alpha: number, rank: number}> By route.
 local function _ShownRoutes()
     local routes = {}
     if not (shownWidth > 0 and shownHeight > 0) then return routes end
     for path in pairs(QuestieWaypoints.paths) do
-        local alpha = path.uiMapId == shownMapId and QuestieWaypoints.WorldMapAlpha(path)
+        local alpha = (path.uiMapId == shownMapId or _ShowsPastEdges(path)) and QuestieWaypoints.WorldMapAlpha(path)
         if alpha then
             -- The highlighted copy first, then the most visible one: alpha is at most 1.
             local rank = alpha + (QuestieWaypoints.IsHighlighted(path) and 2 or 0)
@@ -113,10 +157,7 @@ local function _Refresh()
         local path, alpha = shown.path, shown.alpha
         local entry = views[route]
         if not entry or entry.mapId ~= shownMapId or entry.width ~= shownWidth or entry.height ~= shownHeight then
-            local canvasPoints = {}
-            for i, point in ipairs(path.points) do
-                canvasPoints[i] = {x = point.x * shownWidth / 100, y = point.y * shownHeight / 100}
-            end
+            local canvasPoints = _CanvasPoints(path)
             local view = renderer:Draw(entry and entry.view, {canvasPoints}, _Style(path, alpha))
             entry = {view = view, mapId = shownMapId, width = shownWidth, height = shownHeight,
                 points = canvasPoints, bounds = WaypointGeometry.Bounds(canvasPoints)}
@@ -194,10 +235,11 @@ local function _Update()
     local scale = _GetCanvasScale()
     local settled = scale == currentScale
     currentScale = scale
+    local reach = LEGACY and HBDPins.GetWorldMapReach() or nil
     local changed = false
-    if dirty or mapId ~= shownMapId or width ~= shownWidth or height ~= shownHeight then
-        -- Paths changed, or the map or canvas did: draw again.
-        shownMapId, shownWidth, shownHeight, shownScale = mapId, width, height, scale
+    if dirty or mapId ~= shownMapId or width ~= shownWidth or height ~= shownHeight or reach ~= shownReach then
+        -- Paths changed, or the map or canvas did, or the reach of the view past the map's edges: draw again.
+        shownMapId, shownWidth, shownHeight, shownScale, shownReach = mapId, width, height, scale, reach
         _Refresh()
         changed = true
     elseif scale ~= shownScale and (settled or math.abs(scale / shownScale - 1) > ZOOM_REDRAW_DRIFT) then
