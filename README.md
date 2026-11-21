@@ -44,7 +44,9 @@ Working on 3.3.5a:
   of the map in view, and in BetterMaps' small window it comes and goes with the window's frame. While
   BetterMaps shows its coordinates (`/bmaps coords on`), Questie leaves its own off the map's title. On the
   dungeon maps BetterMaps draws itself, Questie's icons and lines are hidden, as they belong to the game's map
-  underneath. The lines' width and the button's place follow Magnify-WotLK's and Leatrix Maps' zoom the same
+  underneath. Where BetterMaps' free view shows the land round a zone's map, the icons and patrol paths of the
+  zones round it on the same continent show there too, past the map's edges, so a zone's map no longer stops them
+  at its edge. The lines' width and the button's place follow Magnify-WotLK's and Leatrix Maps' zoom the same
   way (not tried with those).
 - **[QuestHelper](https://github.com/kamakazedan/QuestHelper-WotLK)'s tracker:** to use it instead of
   Questie's, untick Enable Tracker on the Tracker tab of Questie's options (or type `/questie tracker`), and
